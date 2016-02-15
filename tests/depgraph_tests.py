@@ -94,7 +94,7 @@ class NeedsBuildTests(unittest.TestCase):
 
         # build dc0
         steps = []
-        for dep in self.dc.needsbuild(self.dc0):
+        for dep, _ in self.dc.needsbuild(self.dc0):
             steps.append(dep.name)
 
         self.assertTrue(steps.index("testproject/da0") < steps.index("testproject/db0"))
@@ -105,8 +105,13 @@ class NeedsBuildTests(unittest.TestCase):
 
         # build dc1
         steps = []
-        for dep in self.dc.needsbuild(self.dc1):
+        reasons = []
+        for dep, reason in self.dc.needsbuild(self.dc1):
             steps.append(dep.name)
+            reasons.append(reason)
+
+        for reason in reasons[:-1]:
+            self.assertEqual(str(reason), "the target is descended from it")
 
         self.assertTrue(steps.index("testproject/da1") < steps.index("testproject/db1"))
         self.assertTrue(steps.index("testproject/db1") < steps.index("testproject/dc1"))
@@ -124,14 +129,14 @@ class NeedsBuildTests(unittest.TestCase):
 
         # build dc0
         steps = []
-        for dep in self.dc.needsbuild(self.dc0):
+        for dep, _ in self.dc.needsbuild(self.dc0):
             steps.append(dep.name)
 
         self.assertEqual(steps, ["testproject/db0", "testproject/dc0"])
 
         # build dc1
         steps = []
-        for dep in self.dc.needsbuild(self.dc1):
+        for dep, _ in self.dc.needsbuild(self.dc1):
             steps.append(dep.name)
 
         self.assertEqual(steps, ["testproject/dc1"])
@@ -152,16 +157,21 @@ class NeedsBuildTests(unittest.TestCase):
 
         # build dc0
         steps = []
-        for dep in self.dc.needsbuild(self.dc0):
+        reasons = []
+        for dep, reason in self.dc.needsbuild(self.dc0):
             steps.append(dep.name)
+            reasons.append(reason)
 
         self.assertEqual(len(steps), 3)
+        self.assertEqual(str(reasons[0]), "it is older than at least one of its parents")
+        self.assertEqual(str(reasons[1]), "it is older than at least one of its parents")
+        self.assertEqual(str(reasons[2]), "it is the target")
         self.assertTrue(steps.index("testproject/db0") < steps.index("testproject/dc0"))
         self.assertTrue(steps.index("testproject/db1") < steps.index("testproject/dc0"))
 
         # build dc1
         steps = []
-        for dep in self.dc.needsbuild(self.dc1):
+        for dep, _ in self.dc.needsbuild(self.dc1):
             steps.append(dep.name)
 
         self.assertEqual(len(steps), 2)

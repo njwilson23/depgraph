@@ -50,6 +50,14 @@ def get_dependencies(target, relations):
         deps.pop(i)
     return deps
 
+class Reason(object):
+
+    def __init__(self, explanation):
+        self._explanation = explanation
+
+    def __str__(self):
+        return self._explanation
+
 class Dependency(object):
 
     __hash__ = object.__hash__
@@ -144,15 +152,20 @@ class DependencyGraph(object):
         #       - if so, build
         #       - if not, are any of its children older than any of its parents?
         #           - if so, build
+
+        because_is_target = Reason("it is the target")
+        because_out_of_date = Reason("it is older than at least one of its parents")
+        because_required = Reason("the target is descended from it")
+
         for dep in self.buildsteps(target):
 
             if os.path.isfile(dep.name):
                 if any(isolder(dep, ancestor) for ancestor in self.leadsto(dep)
                                               if os.path.isfile(ancestor.name)):
-                    yield dep
+                    yield (dep, because_out_of_date)
 
             elif dep == target:
-                yield dep
+                yield (dep, because_is_target)
 
             else:
                 # determine whether a missing dependency needs to be built
@@ -163,7 +176,7 @@ class DependencyGraph(object):
 
                 # compare youngest ancestor to oldest existing child
                 if (len(children) == 0) or isolder(ancestors[-1], children[0]):
-                    yield dep
+                    yield (dep, because_required)
 
     def print_relations(self):
         for k in self.relations:
