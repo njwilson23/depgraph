@@ -178,6 +178,12 @@ class NeedsBuildTests(unittest.TestCase):
         self.assertTrue(steps.index("testproject/db1") < steps.index("testproject/dc1"))
         return
 
+    def test_missing_graph_root(self):
+        cleandir(os.path.join(TESTDIR, "testdata/"))
+        with self.assertRaises(RuntimeError):
+            list(self.dc.needsbuild(self.dc0))
+        return
+
 class SimpleDependencyGraphTests(unittest.TestCase):
 
     def setUp(self):
