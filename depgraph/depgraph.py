@@ -175,6 +175,10 @@ class DependencyGraph(object):
                                          self.dependson(dep)), key=_lastmodified)
 
                 # compare youngest ancestor to oldest existing child
+                if len(ancestors) == 0:
+                    raise RuntimeError("build cannot be satisfied\n"
+                    "{0} does not exist but has no dependencies".format(dep.name))
+
                 if (len(children) == 0) or isolder(ancestors[-1], children[0]):
                     yield (dep, because_required)
 
