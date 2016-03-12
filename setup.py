@@ -1,13 +1,13 @@
 from setuptools import setup, find_packages
 
 setup(
-    name = "depchain",
+    name = "depgraph",
     version = "0.1a0",
     packages = find_packages(),
 
     author = "Nat Wilson",
     author_email = "njwilson23@gmail.com",
-    description = "Small dependency graph resolution library",
+    description = "Small dependency resolution library for datasets",
     license = "MIT License",
     classifiers = ["Programming Language :: Python :: 2",
                    "Programming Language :: Python :: 2.7",
