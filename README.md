@@ -21,5 +21,6 @@ Important considerations for such a build tool are that it must:
 `depgraph` contains the following classes:
 
 - `depgraph.DependencyGraph`
-- `depgraph.Dependency`
+- `depgraph.Dataset`
+- `depgraph.DatasetGroup`
 - `depgraph.Reason`

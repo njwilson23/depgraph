@@ -6,19 +6,19 @@ def _lastmodified(a):
 def isolder(a, b):
     """ returns true if dependency *a* was last modified before dependencies
     *b* """
-    if isinstance(a, Dependency):
+    if isinstance(a, Dataset):
         mtime_a = os.stat(a.name).st_mtime
-    elif isinstance(a, DependencyGroup):
+    elif isinstance(a, DatasetGroup):
         mtime_a = max(os.stat(d.name).st_mtime for d in a)
     else:
-        raise TypeError("must be Dependency or DependencyGroup")
+        raise TypeError("must be Dataset or DatasetGroup")
 
-    if isinstance(b, Dependency):
+    if isinstance(b, Dataset):
         mtime_b = os.stat(b.name).st_mtime
-    elif isinstance(b, DependencyGroup):
+    elif isinstance(b, DatasetGroup):
         mtime_b = min(os.stat(d.name).st_mtime for d in b)
     else:
-        raise TypeError("must be Dependency or DependencyGroup")
+        raise TypeError("must be Dataset or DatasetGroup")
 
     return mtime_a < mtime_b
 
@@ -70,8 +70,8 @@ class Reason(object):
     def __str__(self):
         return self._explanation
 
-class Dependency(object):
-    """ Dependency represents a dataset or a step along a dependency chain. """
+class Dataset(object):
+    """ Dataset represents a dataset or a step along a dependency chain. """
 
     __hash__ = object.__hash__
 
@@ -95,20 +95,20 @@ class Dependency(object):
         else:
             raise AttributeError("'{0}'".format(name))
 
-class DependencyGroup(object):
-    """ DependencyGroup represents multiple Dependency instances that are build
+class DatasetGroup(object):
+    """ DatasetGroup represents multiple Dataset instances that are build
     together. For example, these might be a dataset and associated metadata.
     These should be built together, and dependent files are sensitive to
-    updates in any member of a DependencyGroup.
+    updates in any member of a DatasetGroup.
 
     TODO:
     
-    Currently, the main difference between this an Dependency is that isolder
+    Currently, the main difference between this an Dataset is that isolder
     checks all parts. DependencyGraph could be modified so that calling
     add_relation or add_dataset with targets or dependencies already in an
     existing dependency group substitutes the group instead. (Counterpoint:
     this means that the order of adding dependencies matters (bad) unless
-    adding a DependencyGroup forces the DependencyGraph to search existing
+    adding a DatasetGroup forces the DependencyGraph to search existing
     dependencies for any overlap.)
     """
 
