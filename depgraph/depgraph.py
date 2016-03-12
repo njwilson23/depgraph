@@ -6,9 +6,21 @@ def _lastmodified(a):
 def isolder(a, b):
     """ returns true if dependency *a* was last modified before dependencies
     *b* """
-    sa = os.stat(a.name)
-    sb = os.stat(b.name)
-    return sa.st_mtime < sb.st_mtime
+    if isinstance(a, Dependency):
+        mtime_a = os.stat(a.name).st_mtime
+    elif isinstance(a, DependencyGroup):
+        mtime_a = max(os.stat(d.name).st_mtime for d in a)
+    else:
+        raise TypeError("must be Dependency or DependencyGroup")
+
+    if isinstance(b, Dependency):
+        mtime_b = os.stat(b.name).st_mtime
+    elif isinstance(b, DependencyGroup):
+        mtime_b = min(os.stat(d.name).st_mtime for d in b)
+    else:
+        raise TypeError("must be Dependency or DependencyGroup")
+
+    return mtime_a < mtime_b
 
 def get_dependencies(target, relations):
     """ given *target*, return a list of dependencies sorted from top to bottom
@@ -59,6 +71,7 @@ class Reason(object):
         return self._explanation
 
 class Dependency(object):
+    """ Dependency represents a dataset or a step along a dependency chain. """
 
     __hash__ = object.__hash__
 
@@ -82,6 +95,49 @@ class Dependency(object):
         else:
             raise AttributeError("'{0}'".format(name))
 
+class DependencyGroup(object):
+    """ DependencyGroup represents multiple Dependency instances that are build
+    together. For example, these might be a dataset and associated metadata.
+    These should be built together, and dependent files are sensitive to
+    updates in any member of a DependencyGroup.
+
+    TODO:
+    
+    Currently, the main difference between this an Dependency is that isolder
+    checks all parts. DependencyGraph could be modified so that calling
+    add_relation or add_dataset with targets or dependencies already in an
+    existing dependency group substitutes the group instead. (Counterpoint:
+    this means that the order of adding dependencies matters (bad) unless
+    adding a DependencyGroup forces the DependencyGraph to search existing
+    dependencies for any overlap.)
+    """
+
+    __hash__ = object.__hash__
+
+    def __init__(self, name, datasets, **kw):
+        self.name = name
+        self.datasets = datasets
+        self._store = kw
+
+    def __str__(self):
+        return self.name
+
+    def __eq__(self, other):
+        return (self.name == other.name) and (self._store == other._store)
+
+    def __neq__(self, other):
+        return not (self == other)
+
+    def __iter__(self):
+        for d in self.datasets:
+            yield d
+
+    def __getattr__(self, name):
+        if name in self._store:
+            return self._store[name]
+        else:
+            raise AttributeError("'{0}'".format(name))
+
 class DependencyGraph(object):
     """ Wraps a dictionary DependencyGraph.relations that encodes direct
     relationships between targets (keys) and lists of dependencies (values).
@@ -91,15 +147,15 @@ class DependencyGraph(object):
         self.relations = {}
         pass
 
-    def add_dataset(self, name, dependencies=None):
-        if name in self.relations:
+    def add_dataset(self, dataset, dependencies=None):
+        if dataset in self.relations:
             raise KeyError("{0} already listed in DependencyGraph")
-        self.relations[name] = []
+        self.relations[dataset] = []
         if dependencies is not None:
             for dependency in dependencies:
                 if dependency not in self.relations:
                     self.add_dataset(dependency)
-                self.add_relation(name, dependency)
+                self.add_relation(dataset, dependency)
         return
 
     def add_relation(self, target, dependency):

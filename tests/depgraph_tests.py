@@ -4,7 +4,7 @@ import os
 import time
 
 import depgraph
-from depgraph import Dependency, DependencyGraph
+from depgraph import Dependency, DependencyGroup, DependencyGraph
 
 TESTDIR = os.path.abspath(os.getcwd())
 
@@ -232,6 +232,70 @@ class SimpleDependencyGraphTests(unittest.TestCase):
                          set(["raw0", "raw1", "raw2", "intermediate0", "intermediate1"]))
         return
 
+class DependencyGroupTests(unittest.TestCase):
+
+    def test_isolder1(self):
+        """ define two dependency groups, where all files are older in one
+        than in the other. """
+        dep1a = Dependency("testdata/1a")
+        dep1b = Dependency("testdata/1b")
+        dep1c = Dependency("testdata/1c")
+
+        for dep in (dep1a, dep1b, dep1c):
+            makefile(dep.name)
+        time.sleep(0.05)
+
+        dep2a = Dependency("testdata/2a")
+        dep2b = Dependency("testdata/2b")
+        dep2c = Dependency("testdata/2c")
+
+        for dep in (dep2a, dep2b, dep2c):
+            makefile(dep.name)
+
+        group1 = DependencyGroup("testdata/1", [dep1a, dep1b, dep1c])
+        group2 = DependencyGroup("testdata/2", [dep2a, dep2b, dep2c])
+
+        self.assertTrue(depgraph.isolder(group1, group2))
+
+    def test_isolder2(self):
+        """ define two dependency groups, where files ages overlap, and so
+        group 1 is not absolutely older than group 2 """
+        dep1a = Dependency("testdata/1a")
+        dep1b = Dependency("testdata/1b")
+        dep2c = Dependency("testdata/2c")
+
+        for dep in (dep1a, dep1b, dep2c):
+            makefile(dep.name)
+        time.sleep(0.05)
+
+        dep1c = Dependency("testdata/1c")
+        dep2a = Dependency("testdata/2a")
+        dep2b = Dependency("testdata/2b")
+
+        for dep in (dep1c, dep2a, dep2b):
+            makefile(dep.name)
+
+        group1 = DependencyGroup("testdata/1", [dep1a, dep1b, dep1c])
+        group2 = DependencyGroup("testdata/2", [dep2a, dep2b, dep2c])
+
+        self.assertFalse(depgraph.isolder(group1, group2))
+
+    def test_isolder3(self):
+        """ compare a dependency group to a singular dependency """
+        dep1a = Dependency("testdata/1a")
+        dep1b = Dependency("testdata/1b")
+        dep1c = Dependency("testdata/1c")
+
+        group1 = DependencyGroup("testdata/1", [dep1a, dep1b, dep1c])
+
+        for dep in group1:
+            makefile(dep.name)
+        time.sleep(0.05)
+
+        dep2 = Dependency("testdata/2")
+        makefile(dep2.name)
+
+        self.assertTrue(depgraph.isolder(group1, dep2))
 
 if __name__ == "__main__":
     unittest.main()

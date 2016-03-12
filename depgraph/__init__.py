@@ -1,1 +1,2 @@
-from .depgraph import Dependency, DependencyGraph, get_dependencies, isolder
+from .depgraph import (Dependency, DependencyGroup, DependencyGraph,
+                       get_dependencies, isolder)
