@@ -29,7 +29,7 @@ def cleandir(dirname):
 def fullpath(p):
     return os.path.join(TESTDIR, p)
 
-class NeedsBuildTests(unittest.TestCase):
+class SetterUpper(object):
 
     def setUp(self):
         """ define a simple dependency graph that is complex enough to be
@@ -95,6 +95,9 @@ class NeedsBuildTests(unittest.TestCase):
         if not os.path.isdir(fullpath("testproject")):
             os.makedirs(fullpath("testproject"))
         return
+
+
+class NeedsBuildTests(SetterUpper, unittest.TestCase):
 
     # @classmethod
     # def tearDownClass(cls):
@@ -213,6 +216,35 @@ class NeedsBuildTests(unittest.TestCase):
             list(self.dc.needsbuild(self.dc0))
         return
 
+class BuildableTests(SetterUpper, unittest.TestCase):
+
+    def test_buildable_one_level(self):
+        # mostly just checks that it doesn't fail
+        cleandir(fullpath("testproject"))
+        tobuild = list(self.dc.buildable(self.db0))
+        self.assertTrue(self.da0 in tobuild)
+        self.assertTrue(self.da1 in tobuild)
+        self.assertEqual(len(tobuild), 2)
+        return
+
+    def test_buildable_two_level(self):
+        cleandir(fullpath("testproject"))
+        tobuild = list(self.dc.buildable(self.dc0))
+
+        self.assertTrue(self.da0 in tobuild)
+        self.assertTrue(self.da1 in tobuild)
+        self.assertTrue(self.db1 in tobuild)
+        self.assertEqual(len(tobuild), 3)
+
+        for ds in tobuild:
+            makefile(ds.name)
+
+        tobuild2 = list(self.dc.buildable(self.dc0))
+
+        self.assertTrue(self.db0 in tobuild2)
+        self.assertEqual(len(tobuild2), 1)
+        return
+
 class SimpleDependencyGraphTests(unittest.TestCase):
 
     def setUp(self):
@@ -260,6 +292,10 @@ class SimpleDependencyGraphTests(unittest.TestCase):
         self.assertEqual(self.dc.leadsto("final_result"),
                          set(["raw0", "raw1", "raw2", "intermediate0", "intermediate1"]))
         return
+
+    def test_getroots(self):
+        roots = self.dc.getroots("final_result")
+        self.assertEqual(roots, set(["raw0", "raw1", "raw2"]))
 
 class DatasetGroupTests(unittest.TestCase):
 

@@ -98,7 +98,7 @@ class Dataset(object):
     Parameters
     ----------
     name : str
-        typically imagined to be a filename, but it could be another identifier
+        imagined to be a filename
 
     Other keyword arguments are accessible as instance attributes.
     """
@@ -249,7 +249,14 @@ class DependencyGraph(object):
         deps.extend(subdeps)
         return set(deps)
 
-    def buildable(self, target):
+    def getroots(self, target):
+        """ Return the top-level (without dependencies) datasets that target
+        depends on """
+        roots = [parent for parent in self.leadsto(target)
+                        if len(self.leadsto(parent, 0)) == 0]
+        return set(roots)
+
+    def buildable(self, target, _ancestors=None):
         """ Returns a generator that returns (Dataset, Reason) pairs
         representing products that can be built toward a target given the
         current graph state. These targets do not in general result in the
@@ -264,7 +271,58 @@ class DependencyGraph(object):
         (Dataset, Reason)
         """
 
-        raise NotImplementedError()
+        ParentMissing = Reason("the parent doesn't exist")
+        ParentNewer = Reason("the parent is newer than the child")
+        ChildMissing = Reason("the child doesn't exist")
+
+        def needsbuild(parent, child):
+            if not os.path.isfile(parent.name):
+                return True, ParentMissing
+            elif os.path.isfile(child.name) and isolder(child, parent):
+                return True, ParentNewer
+            elif not os.path.isfile(child.name):
+                return True, ChildMissing
+            else:
+                return False, None
+
+        def walkbranch(dg, stem, ancestors, branches):
+            """ Breadth-first search through branch for broken branches
+            involving ancestors """
+            for child in dg.dependson(stem, 0):
+                if child not in ancestors:
+                    continue
+
+                build, reason = needsbuild(stem, child)
+
+                if build:
+                    if reason in (ParentNewer, ChildMissing):
+                        yield child
+                    elif reason == ParentMissing:
+                        # This means that the stem of the current branch is
+                        # missing. This shouldn't happen, because we
+                        # started form the root and worked down, only
+                        # adding branches
+                        raise RuntimeError("impossible situation")
+
+                elif not build:
+                    if child not in branches:
+                        branches.append(child)
+
+        ancestors = self.leadsto(target)
+        branches = list(self.getroots(target))
+        built = []
+
+        while True:
+            if len(branches) == 0:
+                break
+
+            for result in walkbranch(self, branches[0], ancestors, branches):
+                if result not in built:
+                    built.append(result)
+                    yield result
+            branches = branches[1:]
+
+
 
 
     def needsbuild(self, target):
