@@ -4,8 +4,16 @@ def _lastmodified(a):
     return os.stat(a.name).st_mtime
 
 def isolder(a, b):
-    """ returns true if dependency *a* was last modified before dependencies
-    *b* """
+    """ Returns true if Dataset *a* was last modified before Dataset *b*
+
+    Parameters
+    ----------
+    a, b : Dataset
+
+    Returns
+    -------
+    bool
+    """
     if isinstance(a, Dataset):
         mtime_a = os.stat(a.name).st_mtime
     elif isinstance(a, DatasetGroup):
@@ -23,7 +31,7 @@ def isolder(a, b):
     return mtime_a < mtime_b
 
 def get_dependencies(target, relations):
-    """ given *target*, return a list of dependencies sorted from top to bottom
+    """ Given a target, return a list of dependencies sorted from top to bottom
 
     i.e. if the dependency graph looks like
 
@@ -36,6 +44,14 @@ def get_dependencies(target, relations):
     returns either [intermediate, raw0, raw1]
             or     [raw0, intermediate, raw1]
     as these two options are considered equivalent
+
+    Parameters
+    ----------
+    target : Dataset
+
+    Returns
+    -------
+    list of Datasets
     """
     deps = []
     visited = []
@@ -63,6 +79,12 @@ def get_dependencies(target, relations):
     return deps
 
 class Reason(object):
+    """ A Reason describes why a build step is performed.
+
+    Parameters
+    ----------
+    explanation : str
+    """
 
     def __init__(self, explanation):
         self._explanation = explanation
@@ -71,7 +93,15 @@ class Reason(object):
         return self._explanation
 
 class Dataset(object):
-    """ Dataset represents a dataset or a step along a dependency chain. """
+    """ Dataset represents a dataset or a step along a dependency chain.
+
+    Parameters
+    ----------
+    name : str
+        typically imagined to be a filename, but it could be another identifier
+
+    Other keyword arguments are accessible as instance attributes.
+    """
 
     __hash__ = object.__hash__
 
@@ -102,7 +132,7 @@ class DatasetGroup(object):
     updates in any member of a DatasetGroup.
 
     TODO:
-    
+
     Currently, the main difference between this an Dataset is that isolder
     checks all parts. DependencyGraph could be modified so that calling
     add_relation or add_dataset with targets or dependencies already in an
@@ -174,11 +204,23 @@ class DependencyGraph(object):
         steps.reverse()
         return steps
 
-    def dependson(self, dep, depth=-1):
-        """ Return the datasets that depend on *dep* """
+    def dependson(self, dataset, depth=-1):
+        """ Return the datasets that depend on a Dataset
+
+        Parameters
+        ----------
+        dataset : Dataset
+        depth : int, optional
+            number of edges along which to search the DependencyGraph. Default
+            is to search the entire graph above *dataset*.
+
+        Returns
+        -------
+        set of Datasets
+        """
         children = []
         for k, v in self.relations.items():
-            if dep in v:
+            if dataset in v:
                 children.append(k)
         if depth != 0:
             for child in children:
@@ -186,7 +228,19 @@ class DependencyGraph(object):
         return set(children)
 
     def leadsto(self, target, depth=-1):
-        """ Return the datasets that go into *target* """
+        """ Return the datasets that go into a target Dataset
+
+        Parameters
+        ----------
+        target : Dataset
+        depth : int, optional
+            number of edges along which to search the DependencyGraph. Default
+            is to search the entire graph below *target*.
+
+        Returns
+        -------
+        set of Datasets
+        """
         deps = [d for d in self.relations[target]]
         subdeps = []
         if depth != 0:
@@ -195,10 +249,37 @@ class DependencyGraph(object):
         deps.extend(subdeps)
         return set(deps)
 
+    def buildable(self, target):
+        """ Returns a generator that returns (Dataset, Reason) pairs
+        representing products that can be built toward a target given the
+        current graph state. These targets do not in general result in the
+        target being buildable after a single iteration.
+
+        Parameters
+        ----------
+        target : Dataset
+
+        Yields
+        ------
+        (Dataset, Reason)
+        """
+
+        raise NotImplementedError()
+
+
     def needsbuild(self, target):
         """ Returns a generator for products that must be built/rebuilt to
         satisfy a build chain. Uses `os.stat` to compare files and determine
-        whether dependencies are out of date. """
+        whether dependencies are out of date.
+
+        Parameters
+        ----------
+        target : Dataset
+
+        Yields
+        ------
+        (Dataset, Reason)
+        """
 
         # start from the top and for each dependency:
         # - does it exist?
