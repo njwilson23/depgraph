@@ -8,28 +8,30 @@ Dependency resolution for datasets
 
 ``depgraph`` is a tiny Python library for expressing networks of
 dependencies required to construct datasets. Networks are declared in
-terms of the relationships between source and target datasets (network
-graph edges). ``depgraph`` can then report descendants and parents for
-any particular node and instruct builds in a manner similar to ``make``.
-When a ``DependencyGraph`` object returns a dataset that must be built,
-it provides a reason, such as:
+terms of the relationships (graph edges) between source and target
+datasets (graph nodes). Target datasets can then report sets of
+precursor datasets in the correct order. This makes it simple to throw
+together build script and construct dependencies in parallel.
 
--  the dataset is missing
--  the dataset is out of date and required by another dataset
--  the dataset is a target dataset
+Traditionally, each ``Dataset`` is designed to correspond to a file. A
+``DatasetGroup`` class handles cases where multiple files can be
+considered a single file (e.g. a binary data file and its XML metadata).
 
-``depgraph`` is intended to be a component for assembling dataset build
-tools. Important considerations for such a build tool are that it must:
+When a ``Dataset`` requires a different dataset to be built to satisfy
+its dependencies, it provides a reason, such as:
 
--  permit reproducible analysis
--  be documenting
+-  the dependency is missing
+-  the dependency is out of date
+
+``depgraph`` is intended to be a reusable component for assembling
+scientific dataset build tools. Important considerations for such a
+build tool are that it must:
+
 -  perform fast rebuilds to enable experimentation
-
-``depgraph`` contains the following classes:
-
--  ``depgraph.Dataset``
--  ``depgraph.DatasetGroup``
--  ``depgraph.Reason``
+-  permit `reproducible
+   analysis <http://science.sciencemag.org/content/334/6060/1226.long>`__
+-  be documenting so that `a workflow can be easily
+   reported <http://www.ontosoft.org/gpf/node/1>`__
 
 Example
 -------
