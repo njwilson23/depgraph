@@ -1,11 +1,9 @@
 import unittest
-import sys
 import os
-import shutil
 import time
 
 import depgraph
-from depgraph import Dataset, DatasetGroup, DependencyGraph
+from depgraph import Dataset, DatasetGroup
 
 TESTDIR = os.path.abspath(os.getcwd())
 
@@ -59,15 +57,13 @@ class SetterUpper(object):
         dc1 = Dataset(fullpath("testproject/dc1"), prog="step6")
         dc2 = Dataset(fullpath("testproject/dc2"), prog="step7")
 
-        DC = DependencyGraph()
-
-        DC.add_dataset(da0, (raw0, raw1))
-        DC.add_dataset(da1, (raw2,))
-        DC.add_dataset(db0, (da0, da1))
-        DC.add_dataset(db1, (da1, raw3))
-        DC.add_dataset(dc0, (db0, db1))
-        DC.add_dataset(dc1, (db1,))
-        DC.add_dataset(dc2, (db1,))
+        da0.dependson(raw0, raw1)
+        da1.dependson(raw2)
+        db0.dependson(da0, da1)
+        db1.dependson(da1, raw3)
+        dc0.dependson(db0, db1)
+        dc1.dependson(db1)
+        dc2.dependson(db1)
 
         self.da0 = da0
         self.da1 = da1
@@ -77,8 +73,6 @@ class SetterUpper(object):
         self.dc1 = dc1
         self.dc2 = dc2
 
-        self.dc = DC
-
         # initialize "raw" data
         rawdir = fullpath("testdata")
         ensureisdir(rawdir)
@@ -86,6 +80,7 @@ class SetterUpper(object):
         for dep in (raw0, raw1, raw2, raw3):
             makefile(dep.name)
         time.sleep(0.05)
+        cleandir(fullpath("testproject"))
         return
 
     @classmethod
@@ -96,140 +91,17 @@ class SetterUpper(object):
             os.makedirs(fullpath("testproject"))
         return
 
+class BuildnextTests(SetterUpper, unittest.TestCase):
 
-class NeedsBuildTests(SetterUpper, unittest.TestCase):
-
-    # @classmethod
-    # def tearDownClass(cls):
-    #     shutil.rmtree(fullpath("testdata"))
-    #     shutil.rmtree(fullpath("testproject"))
-    #     return
-
-    def test_linear_build_all(self):
-        """ this tests the straightforward case, where none of the files exist,
-        and must be build from the beginning.
-        """
-        # create the file hierarchy
-        # (no files exist)
-        cleandir(fullpath("testproject"))
-
-        # build dc0
-        steps = []
-        for dep, _ in self.dc.needsbuild(self.dc0):
-            steps.append(dep.name)
-
-        self.assertTrue(steps.index(fullpath("testproject/da0")) <
-                        steps.index(fullpath("testproject/db0")))
-        self.assertTrue(steps.index(fullpath("testproject/da1")) <
-                        steps.index(fullpath("testproject/db0")))
-        self.assertTrue(steps.index(fullpath("testproject/da1")) <
-                        steps.index(fullpath("testproject/db1")))
-        self.assertTrue(steps.index(fullpath("testproject/dc0")) >
-                        steps.index(fullpath("testproject/db0")))
-        self.assertTrue(steps.index(fullpath("testproject/dc0")) >
-                        steps.index(fullpath("testproject/db1")))
-
-        # build dc1
-        steps = []
-        reasons = []
-        for dep, reason in self.dc.needsbuild(self.dc1):
-            steps.append(dep.name)
-            reasons.append(reason)
-
-        for reason in reasons[:-1]:
-            self.assertEqual(str(reason), "the target is descended from it")
-
-        self.assertTrue(steps.index(fullpath("testproject/da1")) <
-                        steps.index(fullpath("testproject/db1")))
-        self.assertTrue(steps.index(fullpath("testproject/db1")) <
-                        steps.index(fullpath("testproject/dc1")))
-        return
-
-    def test_has_intermediate_files(self):
-        """ test the case where intermediate files exist that can be used to speed the build
-        """
-        # create the file hierarchy
-        ensureisdir(fullpath("testproject"))
-        cleandir(fullpath("testproject"))
-        makefile(self.da0.name)
-        makefile(self.da1.name)
-        makefile(self.db1.name)
-
-        # build dc0
-        steps = []
-        for dep, _ in self.dc.needsbuild(self.dc0):
-            steps.append(dep.name)
-
-        self.assertEqual(steps, [fullpath("testproject/db0"),
-                                 fullpath("testproject/dc0")])
-
-        # build dc1
-        steps = []
-        for dep, _ in self.dc.needsbuild(self.dc1):
-            steps.append(dep.name)
-
-        self.assertEqual(steps, [fullpath("testproject/dc1")])
-        return
-
-    def test_has_intermediate_files_needs_rebuild(self):
-        """ test the case where intermediate files exist, but they're out of
-        date and require rebuilding
-        """
-        # create the file hierarchy
-        ensureisdir(fullpath("testproject"))
-        cleandir(fullpath("testproject"))
-        makefile(self.db0.name)
-        makefile(self.db1.name)
-        time.sleep(0.05)
-        makefile(self.da0.name)
-        makefile(self.da1.name)
-
-        # build dc0
-        steps = []
-        reasons = []
-        for dep, reason in self.dc.needsbuild(self.dc0):
-            steps.append(dep.name)
-            reasons.append(reason)
-
-        self.assertEqual(len(steps), 3)
-        self.assertEqual(str(reasons[0]), "it is older than at least one of its parents")
-        self.assertEqual(str(reasons[1]), "it is older than at least one of its parents")
-        self.assertEqual(str(reasons[2]), "it is the target")
-        self.assertTrue(steps.index(fullpath("testproject/db0")) <
-                        steps.index(fullpath("testproject/dc0")))
-        self.assertTrue(steps.index(fullpath("testproject/db1")) <
-                        steps.index(fullpath("testproject/dc0")))
-
-        # build dc1
-        steps = []
-        for dep, _ in self.dc.needsbuild(self.dc1):
-            steps.append(dep.name)
-
-        self.assertEqual(len(steps), 2)
-        self.assertTrue(steps.index(fullpath("testproject/db1")) <
-                        steps.index(fullpath("testproject/dc1")))
-        return
-
-    def test_missing_graph_root(self):
-        cleandir(fullpath("testdata/"))
-        with self.assertRaises(RuntimeError):
-            list(self.dc.needsbuild(self.dc0))
-        return
-
-class BuildableTests(SetterUpper, unittest.TestCase):
-
-    def test_buildable_one_level(self):
-        # mostly just checks that it doesn't fail
-        cleandir(fullpath("testproject"))
-        tobuild = list(self.dc.buildable(self.db0))
+    def test_buildnext_one_level(self):
+        tobuild = list(self.db0.buildnext())
         self.assertTrue(self.da0 in tobuild)
         self.assertTrue(self.da1 in tobuild)
         self.assertEqual(len(tobuild), 2)
         return
 
-    def test_buildable_two_level(self):
-        cleandir(fullpath("testproject"))
-        tobuild = list(self.dc.buildable(self.dc0))
+    def test_buildnext_two_level(self):
+        tobuild = list(self.dc0.buildnext())
 
         self.assertTrue(self.da0 in tobuild)
         self.assertTrue(self.da1 in tobuild)
@@ -239,7 +111,7 @@ class BuildableTests(SetterUpper, unittest.TestCase):
         for ds in tobuild:
             makefile(ds.name)
 
-        tobuild2 = list(self.dc.buildable(self.dc0))
+        tobuild2 = list(self.dc0.buildnext())
 
         self.assertTrue(self.db0 in tobuild2)
         self.assertEqual(len(tobuild2), 1)
@@ -255,47 +127,48 @@ class SimpleDependencyGraphTests(unittest.TestCase):
                \   /
                FINAL
         """
-        dc = DependencyGraph()
-        dc.add_dataset("final_result", ["intermediate0", "intermediate1", "raw0"])
-        dc.add_relation("intermediate0", "raw0")
-        dc.add_relation("intermediate0", "raw1")
-        dc.add_relation("intermediate1", "raw2")
-        self.dc = dc
+        result = Dataset("final_result")
+        intermediate0 = Dataset("intermediate0")
+        intermediate1 = Dataset("intermediate1")
+        raw0 = Dataset("raw0")
+        raw1 = Dataset("raw1")
+        raw2 = Dataset("raw2")
 
-    def test_buildsteps(self):
-        # this test has problems
-        steps = self.dc.buildsteps("final_result")
+        result.dependson(intermediate0, intermediate1, raw0)
+        intermediate0.dependson(raw0, raw1)
+        intermediate1.dependson(raw2)
 
-        self.assertTrue(steps.index("raw2") < steps.index("intermediate1"))
-        self.assertTrue(steps.index("raw0") < steps.index("intermediate0"))
-        self.assertTrue(steps.index("raw1") < steps.index("intermediate0"))
-        self.assertTrue(steps.index("final_result") > steps.index("intermediate0"))
-        self.assertTrue(steps.index("final_result") > steps.index("intermediate1"))
+        self.result = result
+        self.intermediate0 = intermediate0
+        self.intermediate1 = intermediate1
+        self.raw0 = raw0
+        self.raw1 = raw1
+        self.raw2 = raw2
         return
 
     def test_dependson1(self):
-        self.assertEqual(self.dc.dependson("raw1"),
-                         set(["intermediate0", "final_result"]))
+        self.assertEqual(set(self.raw1.children()),
+                         set([self.intermediate0, self.result]))
         return
 
     def test_dependson2(self):
-        self.assertEqual(self.dc.dependson("raw1", depth=0),
-                         set(["intermediate0"]))
+        self.assertEqual(set(self.raw1.children(0)), set([self.intermediate0]))
         return
 
     def test_leadsto1(self):
-        self.assertEqual(self.dc.leadsto("intermediate0"),
-                         set(["raw0", "raw1"]))
+        self.assertEqual(set(self.intermediate0.parents()),
+                         set([self.raw0, self.raw1]))
         return
 
     def test_leadsto2(self):
-        self.assertEqual(self.dc.leadsto("final_result"),
-                         set(["raw0", "raw1", "raw2", "intermediate0", "intermediate1"]))
+        self.assertEqual(set(self.result.parents()),
+                         set([self.raw0, self.raw1, self.raw2,
+                              self.intermediate0, self.intermediate1]))
         return
 
     def test_getroots(self):
-        roots = self.dc.getroots("final_result")
-        self.assertEqual(roots, set(["raw0", "raw1", "raw2"]))
+        roots = self.result.roots()
+        self.assertEqual(set(roots), set([self.raw0, self.raw1, self.raw2]))
 
 class DatasetGroupTests(unittest.TestCase):
 
@@ -304,12 +177,6 @@ class DatasetGroupTests(unittest.TestCase):
         if not os.path.isdir(fullpath("testdata")):
             os.makedirs(fullpath("testdata"))
         return
-
-    # @classmethod
-    # def tearDownClass(cls):
-    #     shutil.rmtree(fullpath("testdata"))
-    #     return
-
 
     def test_isolder1(self):
         """ define two dependency groups, where all files are older in one

@@ -27,7 +27,6 @@ tools. Important considerations for such a build tool are that it must:
 
 ``depgraph`` contains the following classes:
 
--  ``depgraph.DependencyGraph``
 -  ``depgraph.Dataset``
 -  ``depgraph.DatasetGroup``
 -  ``depgraph.Reason``
@@ -50,7 +49,7 @@ Declare a set of dependencies resembling the graph below:
 
 .. code:: python
 
-    from depgraph import Dataset, DependencyGraph
+    from depgraph import Dataset
 
     # Define Datasets
     # use an optional keyword `tool` to provide a key instructing our build tool
@@ -70,20 +69,18 @@ Declare a set of dependencies resembling the graph below:
     DC1 = Dataset("results/dc1", tool="compute_uncertainty")
     DC2 = Dataset("results/dc2", tool="make_plots")
 
-    graph = DependencyGraph()
-
     # Declare relationships
-    graph.add_dataset(da0, (raw0, raw1))
-    graph.add_dataset(da1, (raw2,))
-    graph.add_dataset(db0, (da0, da1))
-    graph.add_dataset(db1, (da1, raw3))
-    graph.add_dataset(dc0, (db0, db1))
-    graph.add_dataset(dc1, (db1,))
-    graph.add_dataset(dc2, (db1,))
+    da0.dependson(raw0, raw1)
+    da1.dependson(raw2)
+    db0.dependson(da0, da1)
+    db1.dependson(da1, raw3)
+    dc0.dependson(db0, db1)
+    dc1.dependson(db1)
+    dc2.dependson(db1)
 
-    # Query buildsteps to build a product
+    # Query buildsteps to build a product (DC1)
     while True:
-        targets = graph.buildable(DC1)
+        targets = list(DC1.buildnext())
 
         if len(targets) == 0:
             break
