@@ -1,2 +1,1 @@
-from .depgraph import (Dataset, DatasetGroup, DependencyGraph,
-                       get_dependencies, isolder)
+from .depgraph import Dataset, DatasetGroup, isolder
