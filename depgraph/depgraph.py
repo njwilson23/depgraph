@@ -259,8 +259,12 @@ class DependencyGraph(object):
     def buildable(self, target, _ancestors=None):
         """ Returns a generator that returns (Dataset, Reason) pairs
         representing products that can be built toward a target given the
-        current graph state. These targets do not in general result in the
-        target being buildable after a single iteration.
+        current graph state.
+
+        These targets are necessary but not necessarily sufficient to build the
+        target after a single iteration. Intended use is to call buildable
+        repeatedly, building the target after each call, until the target can
+        be built.
 
         Parameters
         ----------
