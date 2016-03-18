@@ -263,7 +263,7 @@ def get_descendent_edges(dataset):
         edges.extend(e for e in get_descendent_edges(child) if e not in edges)
     return edges
 
-def graphviz(*datasets, include=None):
+def graphviz(*datasets, **kwargs):
     """ Return a graphviz diagram in dot format describing the dependency
     graph.
 
@@ -271,13 +271,20 @@ def graphviz(*datasets, include=None):
     ----------
     *datasets : Dataset instances
     include : function, optional
-        Callable that returns True if a dataset should be included in the
-        graph. Default is to include all datasets.
+        Callable taking a Dataset and returning a boolean indicating whether a
+        dataset should be included in the graph. Default is to include all
+        datasets.
+    style : function, optional
+        Callable taking a Dataset and returning graphviz styling attributes.
+        Default is bare styling.
 
     Returns
     -------
     str : graphviz visualization in dot format
     """
+    f_incl = kwargs.get("include", lambda d: True)
+    f_style = kwargs.get("style", lambda d: "")
+
     # Make a list of edges (parent, child)
     edges = []
     for ds in datasets:
@@ -286,7 +293,12 @@ def graphviz(*datasets, include=None):
 
     relations = []
     for e in edges:
-        relations.append("{0} -> {1}".format(e[0].name, e[1].name))
+        if f_incl(e[0]) and f_incl(e[1]):
+            s = f_style(e[1])
+            if len(s) != 0:
+                s = " [{0}]".format(s)
+            relations.append("{0} -> {1}{2}".format(e[0].name, e[1].name, s))
+
     dotstr = """strict digraph {{
   {0}
 }}""".format("\n  ".join(relations))
