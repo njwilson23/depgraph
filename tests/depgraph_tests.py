@@ -32,7 +32,7 @@ class SetterUpper(object):
     def setUp(self):
         """ define a simple dependency graph that is complex enough to be
         interesting.
-        
+
          R0      R1      R2      R3         [raw data]
            \     /       |       |
              DA0         DA1    /
@@ -46,7 +46,7 @@ class SetterUpper(object):
         raw1 = Dataset(fullpath("testdata/raw1"), prog="rawdata")
         raw2 = Dataset(fullpath("testdata/raw2"), prog="rawdata")
         raw3 = Dataset(fullpath("testdata/raw3"), prog="rawdata")
-        
+
         da0 = Dataset(fullpath("testproject/da0"), prog="step1")
         da1 = Dataset(fullpath("testproject/da1"), prog="step2")
 
@@ -299,6 +299,24 @@ class CyclicGraphDetectionTests(unittest.TestCase):
         c.dependson(a)
         b.dependson(a)
         self.assertFalse(depgraph.is_acyclic(f))
+
+class GraphvizTests(unittest.TestCase):
+
+    def test_graph(self):
+        a = Dataset("a")
+        b = Dataset("b")
+        c = Dataset("c")
+        d = Dataset("d")
+        d.dependson(c)
+        c.dependson(a, b)
+
+        dot = """strict digraph {
+  c -> d
+  a -> c
+  b -> c
+}"""
+
+        self.assertEqual(depgraph.graphviz(d), dot)
 
 if __name__ == "__main__":
     unittest.main()

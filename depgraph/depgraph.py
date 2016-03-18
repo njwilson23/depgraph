@@ -245,3 +245,49 @@ def is_acyclic(dataset):
     except CircularDependency:
         return False
 
+def get_ancestor_edges(dataset):
+    edges = []
+    for parent in dataset.parents(0):
+        e = (parent, dataset)
+        if e not in edges:
+            edges.append(e)
+        edges.extend(e for e in get_ancestor_edges(parent) if e not in edges)
+    return edges
+
+def get_descendent_edges(dataset):
+    edges = []
+    for child in dataset.children(0):
+        e = (dataset, child)
+        if e not in edges:
+            edges.append(e)
+        edges.extend(e for e in get_descendent_edges(child) if e not in edges)
+    return edges
+
+def graphviz(*datasets, include=None):
+    """ Return a graphviz diagram in dot format describing the dependency
+    graph.
+
+    Parameters
+    ----------
+    *datasets : Dataset instances
+    include : function, optional
+        Callable that returns True if a dataset should be included in the
+        graph. Default is to include all datasets.
+
+    Returns
+    -------
+    str : graphviz visualization in dot format
+    """
+    # Make a list of edges (parent, child)
+    edges = []
+    for ds in datasets:
+        edges.extend(e for e in get_descendent_edges(ds) if e not in edges)
+        edges.extend(e for e in get_ancestor_edges(ds) if e not in edges)
+
+    relations = []
+    for e in edges:
+        relations.append("{0} -> {1}".format(e[0].name, e[1].name))
+    dotstr = """strict digraph {{
+  {0}
+}}""".format("\n  ".join(relations))
+    return dotstr
