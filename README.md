@@ -27,6 +27,10 @@ must:
 - permit [reproducible analysis](http://science.sciencemag.org/content/334/6060/1226.long)
 - be documenting so that [a workflow can be easily reported](http://www.ontosoft.org/gpf/node/1)
 
+Beyond the Python standard library, `depgraph` has no dependencies of its own,
+so it's easy to include in projects running on a laptop, on a large cluster, or
+on the cloud.
+
 ## Example
 
 Declare a set of dependencies resembling the graph below:
