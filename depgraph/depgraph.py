@@ -238,7 +238,7 @@ def get_descendent_edges(dataset):
     return edges
 
 def graphviz(*datasets, include=None):
-    """ Return a graphiviz diagram in dot format describing the dependency
+    """ Return a graphviz diagram in dot format describing the dependency
     graph.
     
     Parameters
@@ -258,4 +258,10 @@ def graphviz(*datasets, include=None):
         edges.extend(e for e in get_descendent_edges(ds) if e not in edges)
         edges.extend(e for e in get_ancestor_edges(ds) if e not in edges)
 
-    raise NotImplementedError()
+    relations = []
+    for e in edges:
+        relations.append("{0} -> {1}".format(e[0].name, e[1].name))
+    dotstr = """strict digraph {{
+  {0}
+}}""".format("\n  ".join(relations))
+    return dotstr

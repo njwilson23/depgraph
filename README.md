@@ -96,3 +96,19 @@ while True:
         my_build_func(target.tool, target.name)
         # [...]
 ```
+
+## Changes
+
+### 0.3
+
+- Cyclic graph detection
+- Graphviz export
+
+### 0.2
+
+- Rewrite, dropping `DependencyGraph` and making `Dataset` the primary class
+
+### 0.1
+
+- First version, copied from `depchain` module of asputil package
+

@@ -241,5 +241,23 @@ class DatasetGroupTests(unittest.TestCase):
 
         self.assertTrue(depgraph.isolder(group1, dep2))
 
+class GraphvizTests(unittest.TestCase):
+
+    def test_graph(self):
+        a = Dataset("a")
+        b = Dataset("b")
+        c = Dataset("c")
+        d = Dataset("d")
+        d.dependson(c)
+        c.dependson(a, b)
+
+        dot = """strict digraph {
+  c -> d
+  a -> c
+  b -> c
+}"""
+
+        self.assertEqual(depgraph.graphviz(d), dot)
+
 if __name__ == "__main__":
     unittest.main()
