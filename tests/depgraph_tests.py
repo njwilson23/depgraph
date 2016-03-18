@@ -241,5 +241,64 @@ class DatasetGroupTests(unittest.TestCase):
 
         self.assertTrue(depgraph.isolder(group1, dep2))
 
+class CyclicGraphDetectionTests(unittest.TestCase):
+
+    def test_acyclic1(self):
+        a = Dataset("a")
+        b = Dataset("b")
+        c = Dataset("c")
+        d = Dataset("d")
+        e = Dataset("e")
+        f = Dataset("f")
+        f.dependson(d, e)
+        e.dependson(b, c)
+        d.dependson(b)
+        c.dependson(a)
+        b.dependson(a)
+        self.assertTrue(depgraph.is_acyclic(f))
+
+    def test_acyclic2(self):
+        a = Dataset("a")
+        b = Dataset("b")
+        c = Dataset("c")
+        d = Dataset("d")
+        e = Dataset("e")
+        f = Dataset("f")
+        f.dependson(d, e)
+        e.dependson(b, c)
+        d.dependson(b)
+        c.dependson(a, d)
+        b.dependson(a)
+        self.assertTrue(depgraph.is_acyclic(f))
+
+    def test_cyclic1(self):
+        a = Dataset("a")
+        b = Dataset("b")
+        c = Dataset("c")
+        d = Dataset("d")
+        e = Dataset("e")
+        f = Dataset("f")
+        f.dependson(d, e)
+        e.dependson(b, c)
+        d.dependson(b)
+        c.dependson(a, f)
+        b.dependson(a)
+        self.assertFalse(depgraph.is_acyclic(f))
+
+    def test_cyclic2(self):
+        a = Dataset("a")
+        b = Dataset("b")
+        c = Dataset("c")
+        d = Dataset("d")
+        e = Dataset("e")
+        f = Dataset("f")
+        a.dependson(f)
+        f.dependson(d, e)
+        e.dependson(b, c)
+        d.dependson(b)
+        c.dependson(a)
+        b.dependson(a)
+        self.assertFalse(depgraph.is_acyclic(f))
+
 if __name__ == "__main__":
     unittest.main()

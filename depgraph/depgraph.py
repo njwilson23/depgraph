@@ -89,20 +89,15 @@ class Dataset(object):
                                            "{1}".format(dataset, self))
 
     def parents(self, depth=-1):
-        """ Return the Datasets that depend on this Dataset """
-        yielded = []
+        """ Return the Datasets that this Dataset depends on """
         for dataset in self._parents:
-            if dataset not in yielded:
-                yielded.append(dataset)
-                yield dataset
+            yield dataset
             if depth != 0:
                 for grandparent in dataset.parents():
-                    if grandparent not in yielded:
-                        yielded.append(grandparent)
-                        yield grandparent
+                    yield grandparent
 
     def children(self, depth=-1):
-        """ Return the Datasets that this Dataset depends on """
+        """ Return the Datasets that depend on this Dataset """
         yielded = []
         for dataset in self._children:
             if dataset not in yielded:
@@ -216,5 +211,37 @@ class RedundantDeclaration(Exception):
         self.message = msg
 
 class CircularDependency(Exception):
-    def __init__(self, msg):
+    def __init__(self, msg="graph not acyclic"):
         self.message = msg
+
+def is_acyclic(dataset):
+    """ Verifies that the portion of the dependency graph *above* a particular
+    dataset is acyclic, i.e. it contains no circular dependencies.
+
+    Parameters
+    ----------
+    dataset : Dataset
+
+    Returns
+    -------
+    bool
+    """
+    def visit(dataset, temp_marks, perm_marks):
+        if dataset in temp_marks:
+            raise CircularDependency()
+        if dataset not in perm_marks:
+            temp_marks.append(dataset)
+            for parent in dataset.parents(0):
+                visit(parent, temp_marks, perm_marks)
+            perm_marks.append(dataset)
+            idx = temp_marks.index(dataset)
+            del temp_marks[idx]
+        return True
+
+    temp_marks = []
+    perm_marks = []
+    try:
+        return visit(dataset, temp_marks, perm_marks)
+    except CircularDependency:
+        return False
+
