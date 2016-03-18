@@ -316,7 +316,22 @@ class GraphvizTests(unittest.TestCase):
   b -> c
 }"""
 
-        self.assertEqual(depgraph.graphviz(d), dot)
+    def test_graph_exclude(self):
+        a = Dataset("a")
+        b = Dataset("b")
+        c = Dataset("c")
+        d = Dataset("d")
+        d.dependson(c)
+        c.dependson(a, b)
+
+        f_incl = lambda d: (d is not b)
+
+        dot = """strict digraph {
+  c -> d
+  a -> c
+}"""
+
+        self.assertEqual(depgraph.graphviz(d, include=f_incl), dot)
 
 if __name__ == "__main__":
     unittest.main()

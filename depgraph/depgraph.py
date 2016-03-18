@@ -275,15 +275,15 @@ def graphviz(*datasets, **kwargs):
         dataset should be included in the graph. Default is to include all
         datasets.
     style : function, optional
-        Callable taking a Dataset and returning graphviz styling attributes.
-        Default is bare styling.
+        Callable taking a tuple of two Dataset instances and returning graphviz
+        styling attributes. Default is bare styling.
 
     Returns
     -------
     str : graphviz visualization in dot format
     """
     f_incl = kwargs.get("include", lambda d: True)
-    f_style = kwargs.get("style", lambda d: "")
+    f_style = kwargs.get("style", lambda e: "")
 
     # Make a list of edges (parent, child)
     edges = []
@@ -294,7 +294,7 @@ def graphviz(*datasets, **kwargs):
     relations = []
     for e in edges:
         if f_incl(e[0]) and f_incl(e[1]):
-            s = f_style(e[1])
+            s = f_style(e)
             if len(s) != 0:
                 s = " [{0}]".format(s)
             relations.append("{0} -> {1}{2}".format(e[0].name, e[1].name, s))
