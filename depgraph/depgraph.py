@@ -80,6 +80,9 @@ class Dataset(object):
             raise AttributeError("'{0}'".format(name))
 
     def dependson(self, *datasets):
+        """ Declare that Dataset depends on one or more other Dataset instances.
+        Does not affect previous declarations.
+        """
         for dataset in datasets:
             if dataset not in self.parents(0):
                 self._parents.append(dataset)
@@ -89,15 +92,34 @@ class Dataset(object):
                                            "{1}".format(dataset, self))
 
     def parents(self, depth=-1):
-        """ Return the Datasets that this Dataset depends on """
+        """ Return the Dataset instances that this Dataset depends on.
+
+        Parameters
+        ----------
+        depth : int
+            Recursion depth. 0 means no recursion, while -1 means infinite
+            recursion.
+        """
+        yielded = []
         for dataset in self._parents:
-            yield dataset
+            if dataset not in yielded:
+                yielded.append(dataset)
+                yield dataset
             if depth != 0:
                 for grandparent in dataset.parents():
-                    yield grandparent
+                    if grandparent not in yielded:
+                        yielded.append(grandparent)
+                        yield grandparent
 
     def children(self, depth=-1):
-        """ Return the Datasets that depend on this Dataset """
+        """ Return the Dataset instances that depend on this Dataset.
+
+        Parameters
+        ----------
+        depth : int
+            Recursion depth. 0 means no recursion, while -1 means infinite
+            recursion.
+        """
         yielded = []
         for dataset in self._children:
             if dataset not in yielded:
@@ -123,6 +145,8 @@ class Dataset(object):
         ------
         (Dataset, Reason)
         """
+        if not is_acyclic(self):
+            raise CircularDependency()
 
         ParentMissing = Reason("the parent doesn't exist")
         ParentNewer = Reason("the parent is newer than the child")
@@ -178,6 +202,10 @@ class Dataset(object):
 
     def roots(self):
         """ Generator for the roots (dependency-less parents) of this Dataset.
+
+        Yields
+        ------
+        Dataset
         """
         for dataset in self._parents:
             if len(dataset._parents) == 0:
