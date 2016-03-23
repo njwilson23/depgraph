@@ -83,14 +83,17 @@ class Dataset(object):
         """ Declare that Dataset depends on one or more other Dataset instances.
         Does not affect previous declarations.
         """
-        for dataset in datasets:
-            if dataset not in self.parents(0):
-                self._parents.append(dataset)
-                if self not in dataset.children(0):
-                    dataset._children.append(self)
-            else:
-                raise RedundantDeclaration("{0} already depends on "
-                                           "{1}".format(dataset, self))
+        newparents = set(datasets)
+        oldparents = set(self._parents)
+        intrx = newparents.intersection(oldparents)
+        if len(intrx) != 0:
+            raise RedundantDeclaration("{0} already depends on "
+                            "{1}".format(self, list(intrx)[0]))
+
+        self._parents = list(newparents.union(oldparents))
+        for parent in newparents:
+            if self not in parent.children(0):
+                parent._children.append(self)
 
     def parents(self, depth=-1):
         """ Return the Dataset instances that this Dataset depends on.
@@ -107,7 +110,7 @@ class Dataset(object):
                 yielded.append(dataset)
                 yield dataset
             if depth != 0:
-                for grandparent in dataset.parents():
+                for grandparent in dataset.parents(depth=depth-1):
                     if grandparent not in yielded:
                         yielded.append(grandparent)
                         yield grandparent
@@ -127,7 +130,7 @@ class Dataset(object):
                 yielded.append(dataset)
                 yield dataset
             if depth != 0:
-                for grandchild in dataset.children():
+                for grandchild in dataset.children(depth=depth-1):
                     if grandchild not in yielded:
                         yielded.append(grandchild)
                         yield grandchild
