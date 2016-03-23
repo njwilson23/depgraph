@@ -94,14 +94,14 @@ class SetterUpper(object):
 class BuildnextTests(SetterUpper, unittest.TestCase):
 
     def test_buildnext_one_level(self):
-        tobuild = list(self.db0.buildnext())
+        tobuild = [dep for dep, reason in self.db0.buildnext()]
         self.assertTrue(self.da0 in tobuild)
         self.assertTrue(self.da1 in tobuild)
         self.assertEqual(len(tobuild), 2)
         return
 
     def test_buildnext_two_level(self):
-        tobuild = list(self.dc0.buildnext())
+        tobuild = [dep for dep, reason in self.dc0.buildnext()]
 
         self.assertTrue(self.da0 in tobuild)
         self.assertTrue(self.da1 in tobuild)
@@ -111,7 +111,7 @@ class BuildnextTests(SetterUpper, unittest.TestCase):
         for ds in tobuild:
             makefile(ds.name)
 
-        tobuild2 = list(self.dc0.buildnext())
+        tobuild2 = [dep for dep, reason in self.dc0.buildnext()]
 
         self.assertTrue(self.db0 in tobuild2)
         self.assertEqual(len(tobuild2), 1)

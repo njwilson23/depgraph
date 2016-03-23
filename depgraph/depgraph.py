@@ -86,7 +86,8 @@ class Dataset(object):
         for dataset in datasets:
             if dataset not in self.parents(0):
                 self._parents.append(dataset)
-                dataset._children.append(self)
+                if self not in dataset.children(0):
+                    dataset._children.append(self)
             else:
                 raise RedundantDeclaration("{0} already depends on "
                                            "{1}".format(dataset, self))
@@ -173,7 +174,7 @@ class Dataset(object):
 
                 if build:
                     if reason in (ParentNewer, ChildMissing):
-                        yield child
+                        yield child, reason
                     elif reason == ParentMissing:
                         # This means that the stem of the current branch is
                         # missing. This shouldn't happen, because we
@@ -193,10 +194,10 @@ class Dataset(object):
             if len(branches) == 0:
                 break
 
-            for result in walkbranch(branches[0], ancestors, branches):
-                if result not in built:
-                    built.append(result)
-                    yield result
+            for dep, reason in walkbranch(branches[0], ancestors, branches):
+                if dep not in built:
+                    built.append(dep)
+                    yield dep, reason
             branches = branches[1:]
         return
 
