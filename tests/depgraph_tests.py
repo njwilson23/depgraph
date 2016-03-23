@@ -100,6 +100,13 @@ class BuildnextTests(SetterUpper, unittest.TestCase):
         self.assertEqual(len(tobuild), 2)
         return
 
+    def test_buildnext_one_level_ignore(self):
+        tobuild = [dep for dep, reason in self.db0.buildnext(ignore=[self.da1])]
+        self.assertTrue(self.da0 in tobuild)
+        self.assertTrue(self.da1 not in tobuild)
+        self.assertEqual(len(tobuild), 1)
+        return
+
     def test_buildnext_two_level(self):
         tobuild = [dep for dep, reason in self.dc0.buildnext()]
 

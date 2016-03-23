@@ -132,7 +132,7 @@ class Dataset(object):
                         yielded.append(grandchild)
                         yield grandchild
 
-    def buildnext(self):
+    def buildnext(self, ignore=None):
         """ Generator for datasets that require building/rebuilding in order to
         build this (objective) Dataset, given the present state of the
         dependency graph.
@@ -141,6 +141,13 @@ class Dataset(object):
         objective Dataset after a single iteration. Intended use is to call
         `buildnext` repeatedly, building the targets after each call, until the
         objective Dataset can be built.
+
+        Parameters
+        ----------
+        ignore : list, optional
+            list of dependencies to ignore building (e.g., because unbuildable
+            or otherwise broken for reasons not encoded in the dependency
+            graph).
 
         Yields
         ------
@@ -188,7 +195,10 @@ class Dataset(object):
 
         ancestors = list(self.parents())
         branches = list(self.roots())
-        built = []
+
+        if ignore is None:
+            ignore = []
+        built = ignore
 
         while True:
             if len(branches) == 0:
