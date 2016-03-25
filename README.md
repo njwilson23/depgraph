@@ -67,13 +67,13 @@ DC1 = Dataset("results/dc1", tool="compute_uncertainty")
 DC2 = Dataset("results/dc2", tool="make_plots")
 
 # Declare relationships
-da0.dependson(raw0, raw1)
-da1.dependson(raw2)
-db0.dependson(da0, da1)
-db1.dependson(da1, raw3)
-dc0.dependson(db0, db1)
-dc1.dependson(db1)
-dc2.dependson(db1)
+DA0.dependson(R0, R1)
+DA1.dependson(R2)
+DB0.dependson(DA0, DA1)
+DB1.DEPENDSON(DA1, R3)
+DC0.DEPENDSON(DB0, DB1)
+DC1.dependson(DB1)
+DC2.dependson(DB1)
 
 # Define a function that builds individual dependencies
 # The *buildmanager* decorator transforms it into a loop that builds all

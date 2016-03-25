@@ -347,7 +347,7 @@ def graphviz(*datasets, **kwargs):
     return dotstr
 
 def buildmanager(delegator):
-    """ Returns a decorator to be used for constructing build managers.
+    """ Decorator to be used for constructing build managers.
 
     Example
     -------
@@ -359,7 +359,7 @@ def buildmanager(delegator):
             return exitcode
 
         # Calling `run_build` now enters a loop that builds all dependencies
-        run_build(target)
+        run_build(target, max_attempts=1)
     """
     def buildloop(target, max_attempts=1):
         """ Perform action to build a target.
