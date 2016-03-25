@@ -3,7 +3,7 @@ import os
 def _lastmodified(a):
     return os.stat(a.name).st_mtime
 
-def isolder(a, b):
+def is_older(a, b):
     """ Returns true if Dataset *a* was last modified before Dataset *b*
 
     Parameters
@@ -166,7 +166,7 @@ class Dataset(object):
         def needsbuild(parent, child):
             if not os.path.isfile(parent.name):
                 return True, ParentMissing
-            elif os.path.isfile(child.name) and isolder(child, parent):
+            elif os.path.isfile(child.name) and is_older(child, parent):
                 return True, ParentNewer
             elif not os.path.isfile(child.name):
                 return True, ChildMissing
@@ -345,3 +345,42 @@ def graphviz(*datasets, **kwargs):
   {0}
 }}""".format("\n  ".join(relations))
     return dotstr
+
+def buildmanager(delegator):
+    """ Returns a decorator to be used for constructing build managers.
+
+    Example
+    -------
+    ::
+        @buildmanager
+        def run_build(dependency):
+            # performs actions to build *dependency*
+            # ...
+            return exitcode
+
+        # Calling `run_build` now enters a loop that builds all dependencies
+        run_build(target)
+    """
+    def buildloop(target, max_attempts=1):
+        """ Perform action to build a target.
+
+        Parameters
+        ----------
+        target : Dataset
+        max_attempts : int
+            maximum number of times a dependency build should be attempted
+        """
+        noop = False
+        attempts = {}
+        while not noop:
+            noop = True
+            for dep, reason in target.buildnext():
+                if attempts.get(dep, 0) < max_attempts:
+                    noop = False
+                    try:
+                        exitcode = delegator(dep)
+                    except Exception as e:
+                        exitcode = 1
+                    attempts[dep] = attempts.get(dep, 0) + 1
+        return attempts
+    return buildloop

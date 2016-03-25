@@ -3,7 +3,7 @@ import os
 import time
 
 import depgraph
-from depgraph import Dataset, DatasetGroup
+from depgraph import Dataset, DatasetGroup, buildmanager
 
 TESTDIR = os.path.abspath(os.getcwd())
 
@@ -124,6 +124,40 @@ class BuildnextTests(SetterUpper, unittest.TestCase):
         self.assertEqual(len(tobuild2), 1)
         return
 
+class BuildManagerTests(SetterUpper, unittest.TestCase):
+
+    def test_perfect_builder(self):
+        """ build manager from a delegator function that always succeeds """
+
+        @buildmanager
+        def build(dep):
+            makefile(dep.name)
+            return 0
+
+        out = build(self.dc0)
+
+        self.assertTrue(os.path.isfile(self.da0.name))
+        self.assertTrue(os.path.isfile(self.da1.name))
+        self.assertTrue(os.path.isfile(self.db0.name))
+        self.assertTrue(os.path.isfile(self.db1.name))
+        return
+
+    def test_perfect_builder_zero_attempt(self):
+        """ build manager from a delegator function that always succeeds """
+
+        @buildmanager
+        def build(dep):
+            makefile(dep.name)
+            return 0
+
+        out = build(self.dc0, max_attempts=0)
+
+        self.assertFalse(os.path.isfile(self.da0.name))
+        self.assertFalse(os.path.isfile(self.da1.name))
+        self.assertFalse(os.path.isfile(self.db0.name))
+        self.assertFalse(os.path.isfile(self.db1.name))
+        return
+
 class SimpleDependencyGraphTests(unittest.TestCase):
 
     def setUp(self):
@@ -185,7 +219,7 @@ class DatasetGroupTests(unittest.TestCase):
             os.makedirs(fullpath("testdata"))
         return
 
-    def test_isolder1(self):
+    def test_is_older1(self):
         """ define two dependency groups, where all files are older in one
         than in the other. """
         dep1a = Dataset(fullpath("testdata/1a"))
@@ -206,9 +240,9 @@ class DatasetGroupTests(unittest.TestCase):
         group1 = DatasetGroup(fullpath("testdata/1"), [dep1a, dep1b, dep1c])
         group2 = DatasetGroup(fullpath("testdata/2"), [dep2a, dep2b, dep2c])
 
-        self.assertTrue(depgraph.isolder(group1, group2))
+        self.assertTrue(depgraph.is_older(group1, group2))
 
-    def test_isolder2(self):
+    def test_is_older2(self):
         """ define two dependency groups, where files ages overlap, and so
         group 1 is not absolutely older than group 2 """
         dep1a = Dataset(fullpath("testdata/1a"))
@@ -229,9 +263,9 @@ class DatasetGroupTests(unittest.TestCase):
         group1 = DatasetGroup(fullpath("testdata/1"), [dep1a, dep1b, dep1c])
         group2 = DatasetGroup(fullpath("testdata/2"), [dep2a, dep2b, dep2c])
 
-        self.assertFalse(depgraph.isolder(group1, group2))
+        self.assertFalse(depgraph.is_older(group1, group2))
 
-    def test_isolder3(self):
+    def test_is_older3(self):
         """ compare a dependency group to a singular dependency """
         dep1a = Dataset(fullpath("testdata/1a"))
         dep1b = Dataset(fullpath("testdata/1b"))
@@ -246,7 +280,7 @@ class DatasetGroupTests(unittest.TestCase):
         dep2 = Dataset(fullpath("testdata/2"))
         makefile(dep2.name)
 
-        self.assertTrue(depgraph.isolder(group1, dep2))
+        self.assertTrue(depgraph.is_older(group1, dep2))
 
 class CyclicGraphDetectionTests(unittest.TestCase):
 

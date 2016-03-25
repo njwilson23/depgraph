@@ -46,7 +46,7 @@ Declare a set of dependencies resembling the graph below:
 
 
 ```python
-from depgraph import Dataset
+from depgraph import Dataset, buildmanager
 
 # Define Datasets
 # use an optional keyword `tool` to provide a key instructing our build tool
@@ -75,7 +75,21 @@ dc0.dependson(db0, db1)
 dc1.dependson(db1)
 dc2.dependson(db1)
 
-# Query buildsteps to build a product (DC1)
+# Define a function that builds individual dependencies
+# The *buildmanager* decorator transforms it into a loop that builds all
+# dependencies below a target
+@buildmanager
+def my_build_func(dependency):
+    # ....
+    return exitcode
+
+my_build_func(DC1)
+
+# Alternatively, implement the build loop manually:
+def my_build_func(dependency):
+    # ....
+    return exitcode
+
 while True:
     targets = list(DC1.buildnext())
 
@@ -93,7 +107,7 @@ while True:
                                                          reason))
         # Call a function or start a subprocess that will result in the
         # target being built and saved to a file
-        my_build_func(target.tool, target.name)
+        my_build_func(target)
         # [...]
 ```
 

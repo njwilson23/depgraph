@@ -1,1 +1,3 @@
-from .depgraph import Dataset, DatasetGroup, isolder, is_acyclic, graphviz
+from .depgraph import (Dataset, DatasetGroup,
+                       is_older, is_acyclic,
+                       graphviz, buildmanager)
