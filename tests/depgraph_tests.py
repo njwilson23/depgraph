@@ -112,16 +112,16 @@ class BuildnextTests(SetterUpper, unittest.TestCase):
 
         self.assertTrue(self.da0 in tobuild)
         self.assertTrue(self.da1 in tobuild)
-        self.assertTrue(self.db1 in tobuild)
-        self.assertEqual(len(tobuild), 3)
+        self.assertEqual(len(tobuild), 2)
 
         for ds in tobuild:
             makefile(ds.name)
 
         tobuild2 = [dep for dep, reason in self.dc0.buildnext()]
 
+        self.assertTrue(self.db1 in tobuild2)
         self.assertTrue(self.db0 in tobuild2)
-        self.assertEqual(len(tobuild2), 1)
+        self.assertEqual(len(tobuild2), 2)
         return
 
 class BuildManagerTests(SetterUpper, unittest.TestCase):

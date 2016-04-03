@@ -137,8 +137,8 @@ class Dataset(object):
 
     def buildnext(self, ignore=None):
         """ Generator for datasets that require building/rebuilding in order to
-        build this (objective) Dataset, given the present state of the
-        dependency graph.
+        build this (target) Dataset, given the present state of the dependency
+        graph.
 
         These targets are necessary but not necessarily sufficient to build the
         objective Dataset after a single iteration. Intended use is to call
@@ -164,9 +164,10 @@ class Dataset(object):
         ChildMissing = Reason("the child doesn't exist")
 
         def needsbuild(parent, child):
-            if not os.path.isfile(parent.name):
-                return True, ParentMissing
-            elif os.path.isfile(child.name) and is_older(child, parent):
+            if not all(os.path.isfile(p.name) for p in child.parents(0)):
+                return False, ParentMissing
+            elif os.path.isfile(child.name) and \
+                    any(is_older(child, p) for p in child.parents(0)):
                 return True, ParentNewer
             elif not os.path.isfile(child.name):
                 return True, ChildMissing
@@ -185,14 +186,16 @@ class Dataset(object):
                 if build:
                     if reason in (ParentNewer, ChildMissing):
                         yield child, reason
-                    elif reason == ParentMissing:
-                        # This means that the stem of the current branch is
-                        # missing. This shouldn't happen, because we
-                        # started form the root and worked down, only
-                        # adding branches
-                        raise RuntimeError("impossible situation")
+                    else:
+                        raise RuntimeError("unexpected reason")
+
+                elif reason is ParentMissing:
+                    # A parent derived from another stem is missing, so delay
+                    # build until that branch is traversed
+                    pass
 
                 elif not build:
+                    # Child is up to date, so append it as a new 'stem' to walk down
                     if child not in branches:
                         branches.append(child)
 
