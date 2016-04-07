@@ -315,7 +315,7 @@ def buildall(target):
     entire graph at every step.
     """
 
-    if not is_acyclic(self):
+    if not is_acyclic(target):
         raise CircularDependency()
 
     # Map of Dataset -> integer, where the integer indicates the build step
