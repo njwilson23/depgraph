@@ -290,6 +290,64 @@ def is_acyclic(dataset):
     except CircularDependency:
         return False
 
+def buildall(target):
+    """ Yield groups of dependencies in the order they should be built to
+    satisfy a target dataset.
+
+    Parameters
+    ----------
+    target : Dataset
+        dataset to by built
+
+    Yields
+    ------
+    lists of Dataset instances
+        datasets that must be built (potentially in parallel) before the next
+        group of datasets
+
+    Raises
+    ------
+    CircularDependency if graph is not acyclic
+
+    Notes
+    -----
+    Compared to Dataset.buildnext, this obviates the need to traverse the
+    entire graph at every step.
+    """
+
+    if not is_acyclic(self):
+        raise CircularDependency()
+
+    # Map of Dataset -> integer, where the integer indicates the build step
+    marks = {}
+
+    def mark_children(dep, i, marks):
+        """ Recursively set marks. """
+        for child in dep.children(0):
+            iold = marks.get(child, -1)
+            if i > iold:
+                marks[child] = i
+            if child == target:
+                return
+        for child in dep.children(0):
+            mark_children(child, i+1, marks=marks)
+        return
+
+    for root in target.roots():
+        mark_children(root, 0, marks)
+
+    i = 0
+    while True:
+        group = []
+        for k,v in marks.items():
+            if v == i:
+                group.append(k)
+        if len(group) == 0:
+            break
+        else:
+            yield group
+            i += 1
+
 def get_ancestor_edges(dataset):
     edges = []
     for parent in dataset.parents(0):

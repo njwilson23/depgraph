@@ -282,6 +282,23 @@ class DatasetGroupTests(unittest.TestCase):
 
         self.assertTrue(depgraph.is_older(group1, dep2))
 
+
+class BuildallTests(SetterUpper, unittest.TestCase):
+
+    def test_buildall(self):
+
+        for i, group in enumerate(depgraph.buildall(self.dc0)):
+            if i == 0:
+                self.assertTrue(self.da0 in group)
+                self.assertTrue(self.da1 in group)
+            elif i == 1:
+                self.assertTrue(self.db0 in group)
+                self.assertTrue(self.db1 in group)
+            elif i == 2:
+                self.assertTrue(self.dc0 in group)
+            else:
+                raise ValueError
+
 class CyclicGraphDetectionTests(unittest.TestCase):
 
     def test_acyclic1(self):
