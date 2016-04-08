@@ -6,7 +6,7 @@ def readme():
 
 setup(
     name = "data-depgraph",
-    version = "0.3.1",
+    version = "0.3.3",
     packages = find_packages(),
 
     author = "Nat Wilson",

@@ -288,14 +288,15 @@ class BuildallTests(SetterUpper, unittest.TestCase):
     def test_buildall(self):
 
         for i, group in enumerate(depgraph.buildall(self.dc0)):
+            datasets = [d for d,_ in group]
             if i == 0:
-                self.assertTrue(self.da0 in group)
-                self.assertTrue(self.da1 in group)
+                self.assertTrue(self.da0 in datasets)
+                self.assertTrue(self.da1 in datasets)
             elif i == 1:
-                self.assertTrue(self.db0 in group)
-                self.assertTrue(self.db1 in group)
+                self.assertTrue(self.db0 in datasets)
+                self.assertTrue(self.db1 in datasets)
             elif i == 2:
-                self.assertTrue(self.dc0 in group)
+                self.assertTrue(self.dc0 in datasets)
             else:
                 raise ValueError
 

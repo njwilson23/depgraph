@@ -159,18 +159,18 @@ class Dataset(object):
         if not is_acyclic(self):
             raise CircularDependency()
 
-        ParentMissing = Reason("the parent doesn't exist")
-        ParentNewer = Reason("the parent is newer than the child")
-        ChildMissing = Reason("the child doesn't exist")
+        ParentMissing = Reason("a parent doesn't exist")
+        ParentNewer = Reason("a parent is newer than the child")
+        Missing = Reason("the dataset doesn't exist")
 
-        def needsbuild(parent, child):
+        def needsbuild(child):
             if not all(os.path.isfile(p.name) for p in child.parents(0)):
                 return False, ParentMissing
             elif os.path.isfile(child.name) and \
                     any(is_older(child, p) for p in child.parents(0)):
                 return True, ParentNewer
             elif not os.path.isfile(child.name):
-                return True, ChildMissing
+                return True, Missing
             else:
                 return False, None
 
@@ -181,10 +181,10 @@ class Dataset(object):
                 if child not in ancestors:
                     continue
 
-                build, reason = needsbuild(stem, child)
+                build, reason = needsbuild(child)
 
                 if build:
-                    if reason in (ParentNewer, ChildMissing):
+                    if reason in (ParentNewer, Missing):
                         yield child, reason
                     else:
                         raise RuntimeError("unexpected reason")
@@ -297,11 +297,11 @@ def buildall(target):
     Parameters
     ----------
     target : Dataset
-        dataset to by built
+        dataset to be built
 
     Yields
     ------
-    lists of Dataset instances
+    lists of (Dataset, Reason) tuples
         datasets that must be built (potentially in parallel) before the next
         group of datasets
 
@@ -317,6 +317,18 @@ def buildall(target):
 
     if not is_acyclic(target):
         raise CircularDependency()
+
+    ParentNewer = Reason("a parent is newer than the child")
+    Missing = Reason("the dataset doesn't exist")
+
+    def needsbuild(dataset):
+        if os.path.isfile(dataset.name) and \
+                any(is_older(dataset, p) for p in dataset.parents(0)):
+            return True, ParentNewer
+        elif not os.path.isfile(dataset.name):
+            return True, Missing
+        else:
+            return False, None
 
     # Map of Dataset -> integer, where the integer indicates the build step
     marks = {}
@@ -341,7 +353,9 @@ def buildall(target):
         group = []
         for k,v in marks.items():
             if v == i:
-                group.append(k)
+                nb, reason = needsbuild(k)
+                if nb:
+                    group.append((k, reason))
         if len(group) == 0:
             break
         else:
