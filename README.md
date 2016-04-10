@@ -19,17 +19,18 @@ dependencies, it provides a reason, such as:
 - the dependency is missing
 - the dependency is out of date
 
-`depgraph` is intended to be a reusable component for assembling scientific
+`depgraph` is intended to be a reusable component for constructing scientific
 dataset build tools. Important considerations for such a build tool are that it
 must:
 
-- perform fast rebuilds to enable experimentation
 - permit [reproducible analysis](http://science.sciencemag.org/content/334/6060/1226.long)
 - be documenting so that [a workflow can be easily reported](http://www.ontosoft.org/gpf/node/1)
+- perform fast rebuilds to enable experimentation
 
 Beyond the Python standard library, `depgraph` has no dependencies of its own,
-so it's easy to include in projects running on a laptop, on a large cluster, or
-on the cloud.
+so it is easy to include in projects running on a laptop, on a large cluster, or
+in the cloud. `depgraph` supports modern Python implementations (Python 2,
+Python 3, PyPy).
 
 ## Example
 
@@ -70,8 +71,8 @@ DC2 = Dataset("results/dc2", tool="make_plots")
 DA0.dependson(R0, R1)
 DA1.dependson(R2)
 DB0.dependson(DA0, DA1)
-DB1.DEPENDSON(DA1, R3)
-DC0.DEPENDSON(DB0, DB1)
+DB1.dependson(DA1, R3)
+DC0.dependson(DB0, DB1)
 DC1.dependson(DB1)
 DC2.dependson(DB1)
 
@@ -79,44 +80,43 @@ DC2.dependson(DB1)
 # The *buildmanager* decorator transforms it into a loop that builds all
 # dependencies below a target
 @buildmanager
-def my_build_func(dependency):
-    # ....
+def batchbuilder(dependency):
+    # [....]
     return exitcode
 
-my_build_func(DC1)
+batchbuilder(DC1)
 
 # Alternatively, implement the build loop manually:
-def my_build_func(dependency):
-    # ....
+def build(dependency):
+    # This may have the same logic as `batchbuilder` above, but we
+    # will call it directly rather than wrapping it in @buildmanager
+    # [....]
     return exitcode
 
-while True:
-    targets = list(DC1.buildnext())
+for group in buildall(DC1):
 
-    if len(targets) == 0:
-        break
-
-    for target, reason in targets:
+    for dep, reason in group:
         # Each target is a dataset with a 'name' attribute and whatever
         # additional keyword arguments where defined with it.
         # The 'reason' is a depgraph.Reason object that codifies why a
         # particular target is necessary (e.g. it's out of date, it's missing,
         # and required by a subsequent target, etc.)
-        print("Building {0} with {1} because {2}".format(target.name,
-                                                         target.tool,
+        print("Building {0} with {1} because {2}".format(dep.name, dep.tool,
                                                          reason))
         # Call a function or start a subprocess that will result in the
         # target being built and saved to a file
-        my_build_func(target)
-        # [...]
+        return_val = built(dep)
+        # Optionally, perform logging, clean-up, or error handling operations
+        # [....]
 ```
 
 ## Changes
 
-### dev
+### Master
 
 - Performance improvements
-- `buildall` generator function
+- `buildall` generator function, which is more efficient than repeatedly calling
+  `Dataset.buildnext()`
 
 ### 0.3
 
