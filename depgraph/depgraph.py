@@ -330,37 +330,37 @@ def buildall(target):
         else:
             return False, None
 
+    def mark_children_breadthfirst(*roots):
+        """ Set marks. """
+        marks = {}
+        queue = [(0, root) for root in roots]
+        while len(queue) != 0:
+            i, dep = queue.pop(0)
+            for child in dep.children(0):
+                iold = marks.get(child, -1)
+                if i > iold:
+                    marks[child] = i
+                queue.append((i+1, child))
+        return marks
+
     # Map of Dataset -> integer, where the integer indicates the build step
-    marks = {}
+    marks = mark_children_breadthfirst(*target.roots())
 
-    def mark_children(dep, i, marks):
-        """ Recursively set marks. """
-        for child in dep.children(0):
-            iold = marks.get(child, -1)
-            if i > iold:
-                marks[child] = i
-            if child == target:
-                return
-        for child in dep.children(0):
-            mark_children(child, i+1, marks=marks)
-        return
+    groups = []
+    maxi = 0
+    for dep, i in marks.items():
+        nb, reason = needsbuild(dep)
+        if nb:
+            while i >= maxi:
+                groups.append([])
+                maxi += 1
+            groups[i].append((dep, reason))
 
-    for root in target.roots():
-        mark_children(root, 0, marks)
-
-    i = 0
-    while True:
-        group = []
-        for k,v in marks.items():
-            if v == i:
-                nb, reason = needsbuild(k)
-                if nb:
-                    group.append((k, reason))
-        if len(group) == 0:
-            break
+    for group in groups:
+        if target in (a[0] for a in group):
+            yield [(target, Missing)]
         else:
             yield group
-            i += 1
 
 def get_ancestor_edges(dataset):
     edges = []

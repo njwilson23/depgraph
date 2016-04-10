@@ -113,6 +113,11 @@ while True:
 
 ## Changes
 
+### dev
+
+- Performance improvements
+- `buildall` generator function
+
 ### 0.3
 
 - Cyclic graph detection
