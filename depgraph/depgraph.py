@@ -319,7 +319,6 @@ def buildall(target):
     Compared to Dataset.buildnext, this obviates the need to traverse the
     entire graph at every step.
     """
-
     if not is_acyclic(target):
         raise CircularDependency()
 
@@ -328,7 +327,8 @@ def buildall(target):
 
     def needsbuild(dataset):
         if os.path.isfile(dataset.name) and \
-                any(is_older(dataset, p) for p in dataset.parents(0)):
+                any(is_older(dataset, p) for p in dataset.parents(0)
+                                         if os.path.isfile(p.name)):
             return True, ParentNewer
         elif not os.path.isfile(dataset.name):
             return True, Missing
