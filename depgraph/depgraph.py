@@ -224,12 +224,17 @@ class Dataset(object):
         ------
         Dataset
         """
+        yielded = []
         for dataset in self._parents:
             if len(dataset._parents) == 0:
-                yield dataset
+                if dataset not in yielded:
+                    yield dataset
+                    yielded.append(dataset)
             else:
                 for gp in dataset.roots():
-                    yield gp
+                    if gp not in yielded:
+                        yield gp
+                        yielded.append(gp)
 
 class DatasetGroup(Dataset):
     """ DatasetGroup represents multiple Dataset instances that are build
@@ -331,7 +336,7 @@ def buildall(target):
             return False, None
 
     def mark_children_breadthfirst(*roots):
-        """ Set marks. """
+        """ Set marks """
         marks = {}
         queue = [(0, root) for root in roots]
         while len(queue) != 0:
