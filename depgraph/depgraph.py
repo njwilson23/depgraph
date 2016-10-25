@@ -44,6 +44,10 @@ class Reason(object):
     def __str__(self):
         return self._explanation
 
+PARENTMISSING = Reason("a parent doesn't exist")
+PARENTNEWER = Reason("a parent is newer than the child")
+MISSING = Reason("the dataset doesn't exist")
+
 class Dataset(object):
     """ Dataset represents a dataset or a step along a dependency chain.
 
@@ -159,18 +163,14 @@ class Dataset(object):
         if not is_acyclic(self):
             raise CircularDependency()
 
-        ParentMissing = Reason("a parent doesn't exist")
-        ParentNewer = Reason("a parent is newer than the child")
-        Missing = Reason("the dataset doesn't exist")
-
         def needsbuild(child):
             if not all(os.path.isfile(p.name) for p in child.parents(0)):
-                return False, ParentMissing
+                return False, PARENTMISSING
             elif os.path.isfile(child.name) and \
                     any(is_older(child, p) for p in child.parents(0)):
-                return True, ParentNewer
+                return True, PARENTNEWER
             elif not os.path.isfile(child.name):
-                return True, Missing
+                return True, MISSING
             else:
                 return False, None
 
@@ -184,12 +184,12 @@ class Dataset(object):
                 build, reason = needsbuild(child)
 
                 if build:
-                    if reason in (ParentNewer, Missing):
+                    if reason in (PARENTNEWER, MISSING):
                         yield child, reason
                     else:
                         raise RuntimeError("unexpected reason")
 
-                elif reason is ParentMissing:
+                elif reason is PARENTMISSING:
                     # A parent derived from another stem is missing, so delay
                     # build until that branch is traversed
                     pass
@@ -322,16 +322,13 @@ def buildall(target):
     if not is_acyclic(target):
         raise CircularDependency()
 
-    ParentNewer = Reason("a parent is newer than the child")
-    Missing = Reason("the dataset doesn't exist")
-
     def needsbuild(dataset):
         if os.path.isfile(dataset.name) and \
                 any(is_older(dataset, p) for p in dataset.parents(0)
                                          if os.path.isfile(p.name)):
-            return True, ParentNewer
+            return True, PARENTNEWER
         elif not os.path.isfile(dataset.name):
-            return True, Missing
+            return True, MISSING
         else:
             return False, None
 
@@ -363,7 +360,7 @@ def buildall(target):
 
     for group in groups:
         if target in (a[0] for a in group):
-            yield [(target, Missing)]
+            yield [(target, MISSING)]
         else:
             yield group
 
