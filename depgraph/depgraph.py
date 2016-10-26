@@ -1,4 +1,5 @@
 import os
+import traceback
 
 def _lastmodified(a):
     return os.stat(a.name).st_mtime
@@ -438,14 +439,17 @@ def buildmanager(delegator):
         # Calling `run_build` now enters a loop that builds all dependencies
         run_build(target, max_attempts=1)
     """
-    def buildloop(target, max_attempts=1):
+    def buildloop(target, max_attempts=1, verbose=False):
         """ Perform action to build a target.
 
         Parameters
         ----------
         target : Dataset
-        max_attempts : int
+            terminal dataset to build
+        max_attempts : int, optional
             maximum number of times a dependency build should be attempted
+        verbose : bool, optional
+            if True, print exceptions (default False)
         """
         noop = False
         attempts = {}
@@ -456,7 +460,9 @@ def buildmanager(delegator):
                     noop = False
                     try:
                         exitcode = delegator(dep)
-                    except Exception as e:
+                    except Exception as exc:
+                        if verbose:
+                            traceback.print_exc(exc)
                         exitcode = 1
                     attempts[dep] = attempts.get(dep, 0) + 1
         return attempts
