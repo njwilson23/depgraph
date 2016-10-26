@@ -205,7 +205,7 @@ class Dataset(object):
 
         if ignore is None:
             ignore = []
-        built = ignore
+        built = [_ for _ in ignore]
 
         while True:
             if len(branches) == 0:
@@ -465,5 +465,6 @@ def buildmanager(delegator):
                             traceback.print_exc(exc)
                         exitcode = 1
                     attempts[dep] = attempts.get(dep, 0) + 1
+        delegator(target)
         return attempts
     return buildloop
