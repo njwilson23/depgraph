@@ -65,6 +65,10 @@ class SetterUpper(object):
         dc1.dependson(db1)
         dc2.dependson(db1)
 
+        self.raw0 = raw0
+        self.raw1 = raw1
+        self.raw2 = raw2
+        self.raw3 = raw3
         self.da0 = da0
         self.da1 = da1
         self.db0 = db0
@@ -125,6 +129,23 @@ class BuildnextTests(SetterUpper, unittest.TestCase):
         return
 
 class BuildManagerTests(SetterUpper, unittest.TestCase):
+
+    def test_buildmanager_unecessary(self):
+        # This should be a no-op, because target and all dependencies already
+        # exist and the target is younger that any dependency. If the build
+        # function is called, fail the test.
+
+        @buildmanager
+        def build(dep):
+            self.fail()
+            return 0
+
+        makefile(self.raw2.name)
+        makefile(self.raw3.name)
+        makefile(self.da1.name)
+        makefile(self.db1.name)
+        build(self.db1)
+        return
 
     def test_perfect_builder(self):
         """ build manager from a delegator function that always succeeds """

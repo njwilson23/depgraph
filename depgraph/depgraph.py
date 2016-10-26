@@ -465,6 +465,8 @@ def buildmanager(delegator):
                             traceback.print_exc(exc)
                         exitcode = 1
                     attempts[dep] = attempts.get(dep, 0) + 1
-        delegator(target)
+        if (not os.path.exists(target.name)) or \
+                any(is_older(target, parent) for parent in target.parents(0)):
+            delegator(target)
         return attempts
     return buildloop
