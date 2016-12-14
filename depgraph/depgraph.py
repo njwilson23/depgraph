@@ -439,7 +439,7 @@ def buildmanager(delegator):
         # Calling `run_build` now enters a loop that builds all dependencies
         run_build(target, max_attempts=1)
     """
-    def buildloop(target, max_attempts=1, verbose=False):
+    def buildloop(target, max_attempts=1, onfailure="raise"):
         """ Perform action to build a target.
 
         Parameters
@@ -448,8 +448,10 @@ def buildmanager(delegator):
             terminal dataset to build
         max_attempts : int, optional
             maximum number of times a dependency build should be attempted
-        verbose : bool, optional
-            if True, print exceptions (default False)
+        onfailure : str
+            if "raise" then propagate failures
+            if "print" then print traceback and continue
+            if "ignore" then continue silently
         """
         noop = False
         attempts = {}
@@ -461,10 +463,13 @@ def buildmanager(delegator):
                     try:
                         exitcode = delegator(dep)
                     except Exception as exc:
-                        if verbose:
-                            traceback.print_exc(exc)
-                        exitcode = 1
-                    attempts[dep] = attempts.get(dep, 0) + 1
+                        if onfailure == "raise":
+                            raise exc
+                        elif onfailure == "print":
+                            traceback.print_exc()
+                        elif onfailure == "ignore":
+                            pass
+                        attempts[dep] = attempts.get(dep, 0) + 1
         if (not os.path.exists(target.name)) or \
                 any(is_older(target, parent) for parent in target.parents(0)):
             delegator(target)
