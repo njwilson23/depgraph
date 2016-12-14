@@ -165,12 +165,12 @@ class Dataset(object):
             raise CircularDependency()
 
         def needsbuild(child):
-            if not all(os.path.isfile(p.name) for p in child.parents(0)):
+            if not all(os.path.exists(p.name) for p in child.parents(0)):
                 return False, PARENTMISSING
-            elif os.path.isfile(child.name) and \
+            elif os.path.exists(child.name) and \
                     any(is_older(child, p) for p in child.parents(0)):
                 return True, PARENTNEWER
-            elif not os.path.isfile(child.name):
+            elif not os.path.exists(child.name):
                 return True, MISSING
             else:
                 return False, None
@@ -324,11 +324,11 @@ def buildall(target):
         raise CircularDependency()
 
     def needsbuild(dataset):
-        if os.path.isfile(dataset.name) and \
+        if os.path.exists(dataset.name) and \
                 any(is_older(dataset, p) for p in dataset.parents(0)
-                                         if os.path.isfile(p.name)):
+                                         if os.path.exists(p.name)):
             return True, PARENTNEWER
-        elif not os.path.isfile(dataset.name):
+        elif not os.path.exists(dataset.name):
             return True, MISSING
         else:
             return False, None
