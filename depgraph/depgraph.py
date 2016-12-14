@@ -427,11 +427,26 @@ def graphviz(*datasets, **kwargs):
 def buildmanager(delegator):
     """ Decorator to be used for constructing build managers.
 
+    Wraps
+    -----
+    A delegator function (f(target, reason)) that given a build target and a
+    reason, attempts to build the target
+
+    Returns
+    -------
+    A function that takes a target Dataset and repeatedly calls the delegator
+    with the correct sequence of intermediate Datasets to develop the target.
+
+    Additional keyword arguments of the retruned function are *max_attampts*,
+    which is an integer indicating how many times a Dataset should be
+    attempted, and a string *onfailure* that may be one of ("raise", "print",
+    "ignore"), indicating how to handle exceptions during the build.
+
     Example
     -------
     ::
-        @buildmanager
-        def run_build(dependency):
+        @buildmanager(print)
+        def run_build(dependency, reason):
             # performs actions to build *dependency*
             # ...
             return exitcode
@@ -439,7 +454,7 @@ def buildmanager(delegator):
         # Calling `run_build` now enters a loop that builds all dependencies
         run_build(target, max_attempts=1)
     """
-    def buildloop(target, max_attempts=1, onfailure="raise"):
+    def executor(target, max_attempts=1, onfailure="raise"):
         """ Perform action to build a target.
 
         Parameters
@@ -461,7 +476,7 @@ def buildmanager(delegator):
                 if attempts.get(dep, 0) < max_attempts:
                     noop = False
                     try:
-                        exitcode = delegator(dep)
+                        exitcode = delegator(dep, reason)
                     except Exception as exc:
                         if onfailure == "raise":
                             raise exc
@@ -472,6 +487,6 @@ def buildmanager(delegator):
                         attempts[dep] = attempts.get(dep, 0) + 1
         if (not os.path.exists(target.name)) or \
                 any(is_older(target, parent) for parent in target.parents(0)):
-            delegator(target)
+            delegator(target, Reason("it was requested by the caller"))
         return attempts
-    return buildloop
+    return executor

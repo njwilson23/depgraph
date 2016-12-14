@@ -136,7 +136,7 @@ class BuildManagerTests(SetterUpper, unittest.TestCase):
         # function is called, fail the test.
 
         @buildmanager
-        def build(dep):
+        def build(dep, reason):
             self.fail()
             return 0
 
@@ -151,7 +151,7 @@ class BuildManagerTests(SetterUpper, unittest.TestCase):
         """ build manager from a delegator function that always succeeds """
 
         @buildmanager
-        def build(dep):
+        def build(dep, reason):
             makefile(dep.name)
             return 0
 
@@ -167,7 +167,7 @@ class BuildManagerTests(SetterUpper, unittest.TestCase):
         """ build manager from a delegator function that always succeeds """
 
         @buildmanager
-        def build(dep):
+        def build(dep, reason):
             makefile(dep.name)
             return 0
 

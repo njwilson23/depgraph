@@ -2,12 +2,12 @@
 
 ![Travis status](https://travis-ci.org/njwilson23/depgraph.svg?branch=master)
 
-`depgraph` is a tiny Python library for expressing networks of dependencies
-required to construct datasets. Networks are declared in terms of the
-relationships (graph edges) between source and target datasets (graph nodes).
-Target datasets can then report sets of precursor datasets in the correct order.
-This makes it simple to throw together build script and construct dependencies
-in parallel.
+`depgraph` is a tiny (<500 LOC) Python library for expressing networks of
+dependencies required to construct datasets. Networks are declared in terms of
+the relationships (graph edges) between source and target datasets (graph
+nodes). Target datasets can then report sets of precursor datasets in the
+correct order. This makes it simple to throw together build script and construct
+dependencies in parallel.
 
 Traditionally, each `Dataset` is designed to correspond to a file. A
 `DatasetGroup` class handles cases where multiple files can be considered a
