@@ -80,14 +80,14 @@ DC2.dependson(DB1)
 # The *buildmanager* decorator transforms it into a loop that builds all
 # dependencies below a target
 @buildmanager
-def batchbuilder(dependency):
+def batchbuilder(dependency, reason):
     # [....]
     return exitcode
 
 batchbuilder(DC1)
 
 # Alternatively, implement the build loop manually:
-def build(dependency):
+def build(dependency, reason):
     # This may have the same logic as `batchbuilder` above, but we
     # will call it directly rather than wrapping it in @buildmanager
     # [....]
@@ -105,7 +105,7 @@ for group in buildall(DC1):
                                                          reason))
         # Call a function or start a subprocess that will result in the
         # target being built and saved to a file
-        return_val = built(dep)
+        return_val = build(dep, reason)
         # Optionally, perform logging, clean-up, or error handling operations
         # [....]
 ```
