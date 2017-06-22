@@ -417,7 +417,7 @@ def graphviz(*datasets, **kwargs):
             s = f_style(e[1])
             if len(s) != 0:
                 s = " [{0}]".format(s)
-            relations.append("{0} -> {1}{2}".format(e[0].name, e[1].name, s))
+            relations.append("\"{0}\" -> \"{1}\"{2}".format(e[0].name, e[1].name, s))
 
     dotstr = """strict digraph {{
   {0}

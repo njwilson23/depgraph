@@ -392,9 +392,9 @@ class GraphvizTests(unittest.TestCase):
 
         dot = depgraph.graphviz(d)
         self.assertEqual(len(dot.split("\n")), 5)
-        self.assertTrue("c -> d" in dot)
-        self.assertTrue("a -> c" in dot)
-        self.assertTrue("b -> c" in dot)
+        self.assertTrue('"c" -> "d"' in dot)
+        self.assertTrue('"a" -> "c"' in dot)
+        self.assertTrue('"b" -> "c"' in dot)
 
 if __name__ == "__main__":
     unittest.main()
