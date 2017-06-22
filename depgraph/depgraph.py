@@ -439,7 +439,7 @@ def buildmanager(delegator):
     A function that takes a target Dataset and repeatedly calls the delegator
     with the correct sequence of intermediate Datasets to develop the target.
 
-    Additional keyword arguments of the retruned function are *max_attampts*,
+    Additional keyword arguments of the returned function are *max_attampts*,
     which is an integer indicating how many times a Dataset should be
     attempted, and a string *onfailure* that may be one of ("raise", "print",
     "ignore"), indicating how to handle exceptions during the build.
