@@ -346,6 +346,8 @@ def buildall(target):
                 queue.append((i+1, child))
         return marks
 
+    parents = set(target.parents())
+
     # Map of Dataset -> integer, where the integer indicates the build step
     marks = mark_children_breadthfirst(*target.roots())
 
@@ -353,7 +355,7 @@ def buildall(target):
     maxi = 0
     for dep, i in marks.items():
         nb, reason = needsbuild(dep)
-        if nb:
+        if nb and dep in parents:
             while i >= maxi:
                 groups.append([])
                 maxi += 1
@@ -472,19 +474,20 @@ def buildmanager(delegator):
         attempts = {}
         while not noop:
             noop = True
-            for dep, reason in target.buildnext():
-                if attempts.get(dep, 0) < max_attempts:
-                    noop = False
-                    try:
-                        exitcode = delegator(dep, reason)
-                    except Exception as exc:
-                        if onfailure == "raise":
-                            raise exc
-                        elif onfailure == "print":
-                            traceback.print_exc()
-                        elif onfailure == "ignore":
-                            pass
-                        attempts[dep] = attempts.get(dep, 0) + 1
+            for build_stage in buildall(target):
+                for dep, reason in build_stage:
+                    if attempts.get(dep, 0) < max_attempts:
+                        noop = False
+                        try:
+                            exitcode = delegator(dep, reason)
+                        except Exception as exc:
+                            if onfailure == "raise":
+                                raise exc
+                            elif onfailure == "print":
+                                traceback.print_exc()
+                            elif onfailure == "ignore":
+                                pass
+                            attempts[dep] = attempts.get(dep, 0) + 1
         if (not os.path.exists(target.name)) or \
                 any(is_older(target, parent) for parent in target.parents(0)):
             delegator(target, Reason("it was requested by the caller"))

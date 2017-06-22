@@ -137,7 +137,7 @@ class BuildManagerTests(SetterUpper, unittest.TestCase):
 
         @buildmanager
         def build(dep, reason):
-            self.fail()
+            self.fail("unecessary build requested")
             return 0
 
         makefile(self.raw2.name)
