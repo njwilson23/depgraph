@@ -1,6 +1,6 @@
 # Dependency resolution for datasets
 
-![Travis status](https://travis-ci.org/njwilson23/depgraph.svg?branch=master)
+[![Build Status](https://travis-ci.org/njwilson23/depgraph.svg?branch=master)](https://travis-ci.org/njwilson23/depgraph)
 
 `depgraph` is a tiny (<500 LOC) Python library for expressing networks of
 dependencies required to construct datasets. Networks are declared in terms of

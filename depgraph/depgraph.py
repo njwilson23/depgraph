@@ -333,29 +333,27 @@ def buildall(target):
         else:
             return False, None
 
-    def mark_children_breadthfirst(*roots):
-        """ Set marks """
+    def mark_children_breadthfirst(roots, parents):
+        """ Mark build order for all ancestors, beginning with the roots. """
         marks = {}
         queue = [(0, root) for root in roots]
         while len(queue) != 0:
             i, dep = queue.pop(0)
-            for child in dep.children(0):
+            for child in filter(lambda d: d in parents, dep.children(0)):
                 iold = marks.get(child, -1)
                 if i > iold:
                     marks[child] = i
                 queue.append((i+1, child))
         return marks
 
-    parents = set(target.parents())
-
     # Map of Dataset -> integer, where the integer indicates the build step
-    marks = mark_children_breadthfirst(*target.roots())
+    marks = mark_children_breadthfirst(target.roots(), set(target.parents()))
 
     groups = []
     maxi = 0
     for dep, i in marks.items():
         nb, reason = needsbuild(dep)
-        if nb and dep in parents:
+        if nb:
             while i >= maxi:
                 groups.append([])
                 maxi += 1
