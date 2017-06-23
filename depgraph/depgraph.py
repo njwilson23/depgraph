@@ -390,20 +390,24 @@ def graphviz(*datasets, **kwargs):
     Parameters
     ----------
     *datasets : Dataset instances
-    include : function, optional
+    node_id : function(Dataset) -> str, optional
+        Callable taking a Dataset and returning a name to use as a graphviz node
+        id. Default is Dataset.name.
+    style : function(Dataset) -> dict, optional
+        Callable taking a Dataset and returning graphviz styling attributes.
+        Default is bare styling.
+    include : function(Dataset, Dataset) -> bool, optional
         Callable taking a Dataset and returning a boolean indicating whether a
         dataset should be included in the graph. Default is to include all
         datasets.
-    style : function, optional
-        Callable taking a Dataset and returning graphviz styling attributes.
-        Default is bare styling.
 
     Returns
     -------
     str : graphviz visualization in dot format
     """
-    f_incl = kwargs.get("include", lambda d: True)
-    f_style = kwargs.get("style", lambda d: "")
+    f_id = kwargs.get("node_id", lambda d: d.name)
+    f_style = kwargs.get("style", lambda d1, d2: {})
+    f_incl = kwargs.get("include", lambda d1, d2: True)
 
     # Make a list of edges (parent, child)
     edges = []
@@ -413,11 +417,11 @@ def graphviz(*datasets, **kwargs):
 
     relations = []
     for e in edges:
-        if f_incl(e[0]) and f_incl(e[1]):
-            s = f_style(e[1])
+        if f_incl(*e):
+            s = f_style(*e)
             if len(s) != 0:
-                s = " [{0}]".format(s)
-            relations.append("\"{0}\" -> \"{1}\"{2}".format(e[0].name, e[1].name, s))
+                s = " [{}]".format(",".join(["{}={}".format(*kv) for kv in s.items()]))
+            relations.append("\"{}\" -> \"{}\"{}".format(f_id(e[0]), f_id(e[1]), s))
 
     dotstr = """strict digraph {{
   {0}

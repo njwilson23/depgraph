@@ -396,5 +396,53 @@ class GraphvizTests(unittest.TestCase):
         self.assertTrue('"a" -> "c"' in dot)
         self.assertTrue('"b" -> "c"' in dot)
 
+    def test_graph_include(self):
+        a = Dataset("a")
+        b = Dataset("b")
+        c = Dataset("c")
+        d = Dataset("d")
+        d.dependson(c)
+        c.dependson(a, b)
+
+        # Include only parents of `d`
+        dot = depgraph.graphviz(d, include=lambda d1, d2: d in d1.children(0))
+        self.assertEqual(len(dot.split("\n")), 3)
+        self.assertTrue('"c" -> "d"' in dot)
+
+    def test_graph_edge_style(self):
+        a = Dataset("violet")
+        b = Dataset("green")
+        c = Dataset("red")
+        d = Dataset("blue")
+        d.dependson(c)
+        c.dependson(a, b)
+
+        dot = depgraph.graphviz(d, style=lambda d1, d2: {"color": d2.name, "weight": 2})
+        self.assertEqual(len(dot.split("\n")), 5)
+        for line in dot.split("\n"):
+            if line.startswith('"red"'):
+                self.assertTrue("color=blue" in line)
+                self.assertTrue("weight=2" in line)
+            elif line.startswith('"violent"'):
+                self.assertTrue("color=red" in line)
+                self.assertTrue("weight=2" in line)
+            elif line.startswith('"green"'):
+                self.assertTrue("color=red" in line)
+                self.assertTrue("weight=2" in line)
+
+    def test_graph_node_name(self):
+        a = Dataset("a")
+        b = Dataset("b")
+        c = Dataset("c")
+        d = Dataset("d")
+        d.dependson(c)
+        c.dependson(a, b)
+
+        dot = depgraph.graphviz(d, node_id=lambda d: d.name.upper())
+        self.assertEqual(len(dot.split("\n")), 5)
+        self.assertTrue('"C" -> "D"' in dot)
+        self.assertTrue('"A" -> "C"' in dot)
+        self.assertTrue('"B" -> "C"' in dot)
+
 if __name__ == "__main__":
     unittest.main()
