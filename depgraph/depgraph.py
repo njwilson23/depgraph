@@ -238,7 +238,7 @@ class Dataset(object):
                         yielded.append(gp)
 
 class DatasetGroup(Dataset):
-    """ DatasetGroup represents multiple Dataset instances that are build
+    """ DatasetGroup represents multiple Dataset instances that are built
     together. For example, these might be a dataset and associated metadata.
     These should be built together, and dependent files are sensitive to
     updates in any member of a DatasetGroup.
