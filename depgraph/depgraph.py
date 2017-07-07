@@ -110,15 +110,15 @@ class Dataset(object):
             Recursion depth. 0 means no recursion, while -1 means infinite
             recursion.
         """
-        yielded = []
+        yielded = {}
         for dataset in self._parents:
             if dataset not in yielded:
-                yielded.append(dataset)
+                yielded[dataset] = True
                 yield dataset
             if depth != 0:
                 for grandparent in dataset.parents(depth=depth-1):
                     if grandparent not in yielded:
-                        yielded.append(grandparent)
+                        yielded[grandparent] = True
                         yield grandparent
 
     def children(self, depth=-1):
@@ -130,15 +130,15 @@ class Dataset(object):
             Recursion depth. 0 means no recursion, while -1 means infinite
             recursion.
         """
-        yielded = []
+        yielded = {}
         for dataset in self._children:
             if dataset not in yielded:
-                yielded.append(dataset)
+                yielded[dataset] = True
                 yield dataset
             if depth != 0:
                 for grandchild in dataset.children(depth=depth-1):
                     if grandchild not in yielded:
-                        yielded.append(grandchild)
+                        yielded[grandchild] = True
                         yield grandchild
 
     def buildnext(self, ignore=None):
@@ -226,17 +226,17 @@ class Dataset(object):
         ------
         Dataset
         """
-        yielded = []
+        yielded = {}
         for dataset in self._parents:
             if len(dataset._parents) == 0:
                 if dataset not in yielded:
                     yield dataset
-                    yielded.append(dataset)
+                    yielded[dataset] = True
             else:
                 for gp in dataset.roots():
                     if gp not in yielded:
                         yield gp
-                        yielded.append(gp)
+                        yielded[gp] = True
 
 class DatasetGroup(Dataset):
     """ DatasetGroup represents multiple Dataset instances that are built
