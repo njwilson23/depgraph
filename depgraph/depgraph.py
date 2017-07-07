@@ -1,4 +1,5 @@
 import os
+import itertools
 import traceback
 
 def _lastmodified(a):
@@ -64,8 +65,8 @@ class Dataset(object):
 
     def __init__(self, name, **kw):
         self.name = name
-        self._parents = []
-        self._children = []
+        self._parents = set()
+        self._children = set()
         self._store = kw
         return
 
@@ -89,16 +90,16 @@ class Dataset(object):
         Does not affect previous declarations.
         """
         newparents = set(datasets)
-        oldparents = set(self._parents)
+        oldparents = self._parents
         intrx = newparents.intersection(oldparents)
         if len(intrx) != 0:
             raise RedundantDeclaration("{0} already depends on "
                             "{1}".format(self, list(intrx)[0]))
 
-        self._parents = list(newparents.union(oldparents))
+        self._parents = newparents.union(oldparents)
         for parent in newparents:
             if self not in parent.children(0):
-                parent._children.append(self)
+                parent._children = parent._children.union((self,))
 
     def parents(self, depth=-1):
         """ Return the Dataset instances that this Dataset depends on.
@@ -244,18 +245,22 @@ class DatasetGroup(Dataset):
     updates in any member of a DatasetGroup.
     """
 
-    __hash__ = object.__hash__
-
     def __init__(self, name, datasets, **kw):
         self.name = name
         self.datasets = datasets
-        self._parents = []
-        self._children = []
         self._store = kw
 
     def __iter__(self):
         for d in self.datasets:
             yield d
+
+    @property
+    def _parents(self):
+        return set(itertools.chain(*[ds._parents for ds in self.datasets]))
+
+    @property
+    def _children(self):
+        return set(itertools.chain(*[ds._children for ds in self.datasets]))
 
 class RedundantDeclaration(Exception):
     def __init__(self, msg):

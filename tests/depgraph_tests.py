@@ -303,6 +303,42 @@ class DatasetGroupTests(unittest.TestCase):
 
         self.assertTrue(depgraph.is_older(group1, dep2))
 
+    def test_parents(self):
+
+        d1a = Dataset("1a")
+        d1b = Dataset("1b")
+        d1c = Dataset("1c")
+        d1d = Dataset("1d")
+
+        d2a = Dataset("2a")
+        d2b = Dataset("2b")
+        d2c = Dataset("2c")
+
+        d2a.dependson(d1a, d1b)
+        d2b.dependson(d1c)
+        d2c.dependson(d1d)
+
+        dg = DatasetGroup("dg", [d2a, d2b, d2c])
+        self.assertEqual(set(dg.parents()), set([d1a, d1b, d1c, d1d]))
+
+    def test_children(self):
+
+        d1a = Dataset("1a")
+        d1b = Dataset("1b")
+        d1c = Dataset("1c")
+        d1d = Dataset("1d")
+
+        d2a = Dataset("2a")
+        d2b = Dataset("2b")
+        d2c = Dataset("2c")
+
+        d2a.dependson(d1a, d1b)
+        d2b.dependson(d1c)
+        d2c.dependson(d1d)
+
+        dg = DatasetGroup("dg", [d1a, d1b, d1c])
+        self.assertEqual(set(dg.children()), set([d2a, d2b]))
+
 
 class BuildallTests(SetterUpper, unittest.TestCase):
 
