@@ -74,16 +74,9 @@ class Dataset(object):
         """ Declare that Dataset depends on one or more other Dataset instances.
         Does not affect previous declarations.
         """
-        newparents = set(datasets)
-        oldparents = self._parents
-        intrx = newparents.intersection(oldparents)
-        if len(intrx) != 0:
-            raise RedundantDeclaration("{0} already depends on "
-                            "{1}".format(self, list(intrx)[0]))
-
-        self._parents = newparents.union(oldparents)
-        for parent in newparents:
-            if self not in parent.children(0):
+        self._parents = self._parents.union(datasets)
+        for parent in datasets:
+            if self not in parent._children:
                 parent._children = parent._children.union((self,))
 
     def parents(self, depth=-1):
@@ -258,10 +251,6 @@ class DatasetGroup(Dataset):
     @property
     def exists(self):
         return all(d.exists for d in self)
-
-class RedundantDeclaration(Exception):
-    def __init__(self, msg):
-        self.message = msg
 
 class CircularDependency(Exception):
     def __init__(self, msg="graph not acyclic"):
