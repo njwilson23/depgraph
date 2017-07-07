@@ -2,36 +2,6 @@ import os
 import itertools
 import traceback
 
-def _lastmodified(a):
-    return os.stat(a.name).st_mtime
-
-def is_older(a, b):
-    """ Returns true if Dataset *a* was last modified before Dataset *b*
-
-    Parameters
-    ----------
-    a, b : Dataset
-
-    Returns
-    -------
-    bool
-    """
-    if isinstance(a, DatasetGroup):
-        mtime_a = max(os.stat(d.name).st_mtime for d in a)
-    elif isinstance(a, Dataset):
-        mtime_a = os.stat(a.name).st_mtime
-    else:
-        raise TypeError("must be Dataset or DatasetGroup")
-
-    if isinstance(b, DatasetGroup):
-        mtime_b = min(os.stat(d.name).st_mtime for d in b)
-    elif isinstance(b, Dataset):
-        mtime_b = os.stat(b.name).st_mtime
-    else:
-        raise TypeError("must be Dataset or DatasetGroup")
-
-    return mtime_a < mtime_b
-
 class Reason(object):
     """ A Reason describes why a build step is performed.
 
@@ -84,6 +54,21 @@ class Dataset(object):
             return self._store[name]
         else:
             raise AttributeError("'{0}'".format(name))
+
+    @property
+    def min_age(self):
+        return os.stat(self.name).st_mtime
+
+    @property
+    def max_age(self):
+        return os.stat(self.name).st_mtime
+
+    @property
+    def exists(self):
+        return os.path.exists(self.name)
+
+    def is_older_than(self, other):
+        return self.max_age < other.min_age
 
     def dependson(self, *datasets):
         """ Declare that Dataset depends on one or more other Dataset instances.
@@ -166,12 +151,12 @@ class Dataset(object):
             raise CircularDependency()
 
         def needsbuild(child):
-            if not all(os.path.exists(p.name) for p in child.parents(0)):
+            if not all(p.exists for p in child.parents(0)):
                 return False, PARENTMISSING
-            elif os.path.exists(child.name) and \
-                    any(is_older(child, p) for p in child.parents(0)):
+            elif child.exists and \
+                    any(child.is_older_than(par) for par in child.parents(0)):
                 return True, PARENTNEWER
-            elif not os.path.exists(child.name):
+            elif not child.exists:
                 return True, MISSING
             else:
                 return False, None
@@ -262,6 +247,18 @@ class DatasetGroup(Dataset):
     def _children(self):
         return set(itertools.chain(*[ds._children for ds in self.datasets]))
 
+    @property
+    def min_age(self):
+        return min(os.stat(d.name).st_mtime for d in self)
+
+    @property
+    def max_age(self):
+        return max(os.stat(d.name).st_mtime for d in self)
+
+    @property
+    def exists(self):
+        return all(d.exists for d in self)
+
 class RedundantDeclaration(Exception):
     def __init__(self, msg):
         self.message = msg
@@ -329,11 +326,11 @@ def buildall(target):
         raise CircularDependency()
 
     def needsbuild(dataset):
-        if os.path.exists(dataset.name) and \
-                any(is_older(dataset, p) for p in dataset.parents(0)
-                                         if os.path.exists(p.name)):
+        if dataset.exists and \
+                any(dataset.is_older_than(par) for par in dataset.parents(0)
+                                               if par.exists):
             return True, PARENTNEWER
-        elif not os.path.exists(dataset.name):
+        elif not dataset.exists:
             return True, MISSING
         else:
             return False, None
@@ -495,8 +492,8 @@ def buildmanager(delegator):
                             elif onfailure == "ignore":
                                 pass
                             attempts[dep] = attempts.get(dep, 0) + 1
-        if (not os.path.exists(target.name)) or \
-                any(is_older(target, parent) for parent in target.parents(0)):
+        if (not target.exists) or \
+                any(target.is_older_than(par) for par in target.parents(0)):
             delegator(target, Reason("it was requested by the caller"))
         return attempts
     return executor

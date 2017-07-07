@@ -261,7 +261,7 @@ class DatasetGroupTests(unittest.TestCase):
         group1 = DatasetGroup(fullpath("testdata/1"), [dep1a, dep1b, dep1c])
         group2 = DatasetGroup(fullpath("testdata/2"), [dep2a, dep2b, dep2c])
 
-        self.assertTrue(depgraph.is_older(group1, group2))
+        self.assertTrue(group1.is_older_than(group2))
 
     def test_is_older2(self):
         """ define two dependency groups, where files ages overlap, and so
@@ -284,7 +284,7 @@ class DatasetGroupTests(unittest.TestCase):
         group1 = DatasetGroup(fullpath("testdata/1"), [dep1a, dep1b, dep1c])
         group2 = DatasetGroup(fullpath("testdata/2"), [dep2a, dep2b, dep2c])
 
-        self.assertFalse(depgraph.is_older(group1, group2))
+        self.assertFalse(group1.is_older_than(group2))
 
     def test_is_older3(self):
         """ compare a dependency group to a singular dependency """
@@ -301,7 +301,7 @@ class DatasetGroupTests(unittest.TestCase):
         dep2 = Dataset(fullpath("testdata/2"))
         makefile(dep2.name)
 
-        self.assertTrue(depgraph.is_older(group1, dep2))
+        self.assertTrue(group1.is_older_than(dep2))
 
     def test_parents(self):
 
