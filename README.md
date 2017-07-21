@@ -123,6 +123,8 @@ batchbuilder(DC1)
 
 # Option 2:
 # Implement the build loop manually
+from depgraph import buildall
+
 def build(dependency, reason):
     # This may have the same logic as `batchbuilder` above, but we
     # will call it directly rather than wrapping it in @buildmanager
