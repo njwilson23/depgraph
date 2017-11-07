@@ -50,8 +50,8 @@ class Dataset(object):
         return not (self == other)
 
     def __getattr__(self, name):
-        if name in self._store:
-            return self._store[name]
+        if name in object.__getattribute__(self, "_store"):
+            return object.__getattribute__(self, "_store")[name]
         else:
             raise AttributeError("'{0}'".format(name))
 

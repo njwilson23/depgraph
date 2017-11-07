@@ -1,6 +1,7 @@
-import unittest
+import concurrent.futures
 import os
 import time
+import unittest
 
 import depgraph
 from depgraph import Dataset, DatasetGroup, buildmanager
@@ -177,6 +178,25 @@ class BuildManagerTests(SetterUpper, unittest.TestCase):
         self.assertFalse(os.path.isfile(self.da1.name))
         self.assertFalse(os.path.isfile(self.db0.name))
         self.assertFalse(os.path.isfile(self.db1.name))
+        return
+
+    def test_parallel_builder(self):
+
+        def build(dep, reason):
+            makefile(dep.name)
+            return reason
+
+        futures = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            for stage in depgraph.buildall(self.dc0):
+                for dep, reason in stage:
+                    futures.append(pool.submit(build, dep, reason))
+        concurrent.futures.wait(futures)
+
+        self.assertTrue(os.path.isfile(self.da0.name))
+        self.assertTrue(os.path.isfile(self.da1.name))
+        self.assertTrue(os.path.isfile(self.db0.name))
+        self.assertTrue(os.path.isfile(self.db1.name))
         return
 
 class SimpleDependencyGraphTests(unittest.TestCase):
