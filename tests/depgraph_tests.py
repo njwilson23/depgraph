@@ -1,5 +1,5 @@
-import concurrent.futures
 import os
+import sys
 import time
 import unittest
 
@@ -180,7 +180,10 @@ class BuildManagerTests(SetterUpper, unittest.TestCase):
         self.assertFalse(os.path.isfile(self.db1.name))
         return
 
+    @unittest.skipIf(sys.version_info < (3, 2), "requires concurrent.futures")
     def test_parallel_builder(self):
+
+        import concurrent.futures
 
         def build(dep, reason):
             makefile(dep.name)
