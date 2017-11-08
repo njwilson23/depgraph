@@ -2,24 +2,32 @@
 
 [![Build Status](https://travis-ci.org/njwilson23/depgraph.svg?branch=master)](https://travis-ci.org/njwilson23/depgraph)
 
-`depgraph` is a tiny (<500 LOC) Python library for expressing networks of
-dependencies required to construct datasets. Networks are declared in terms of
-the relationships (graph edges) between source and target datasets (graph
-nodes). Target datasets can then report sets of precursor datasets in the
-correct order. This makes it simple to throw together a build script and
-construct dependencies, sequentially or with parallelization.
+*depgraph* is a tiny (<500 LOC) Python library for expressing networks of
+datasets and their relationships. In this way, it is superficially similar to
+[Airflow](https://github.com/apache/incubator-airflow) and
+[Luigi](https://github.com/spotify/luigi), although those tools contain
+significantly more functionality.
+
+Networks are declared in terms of the relationships (graph edges) between source
+and target datasets (graph nodes). Target datasets can then report sets of
+precursor datasets in the correct order. This makes it simple to throw together
+a build script and construct dependencies, sequentially or with parallelization.
 
 Traditionally, each `Dataset` is designed to correspond to a file. A
 `DatasetGroup` class handles cases where multiple files can be considered a
 single file (e.g. a binary data file and its XML metadata).
 
+> Different kinds of resources, such as database tables, can be used as long as
+> they can be queried to determine whether they exist (how how old they are, in
+> order to tak advantage of age-based incremental building).
+
 When a `Dataset` requires a different dataset to be built to satisfy its
 dependencies, it provides a reason, such as:
 
-- the dependency is missing
-- the dependency is out of date
+- the `Dataset` is missing, and so must be built
+- the `Dataset` is out of date
 
-`depgraph` is intended to be a reusable component for constructing scientific
+*depgraph* is intended to be a reusable component for constructing scientific
 dataset build tools. Important considerations for such a build tool are that it
 must:
 
@@ -27,10 +35,10 @@ must:
 - be documenting so that [a workflow can be easily reported](http://www.ontosoft.org/gpf/node/1)
 - perform fast rebuilds to enable experimentation
 
-Beyond the Python standard library, `depgraph` has no dependencies of its own,
-so it is easy to include in projects running on a laptop, on a large cluster, or
-in the cloud. `depgraph` supports modern Python implementations (Python 2,
-Python 3, PyPy).
+Beyond the standard library, *depgraph* has no dependencies of its own, so it is
+easy to include in projects running on a laptop, on a large cluster, or in the
+cloud. *depgraph* supports modern Python implementations (Python 2, Python 3,
+PyPy), and works on Linux, OS X, and Windows.
 
 ## Important parts
 
@@ -51,14 +59,15 @@ Relationships are defined with `Dataset.dependson(obj)`, where *obj* is another
 large dependency graphs.
 
 A user defined `build(dataset, reason)` function (name unimportant) takes a
-dataset and defines how it should be constructed. The *reason* is a `Reason`
-object that clarifies the reason for a build.
+dataset and constructs it based on its ancestors and any other attributes of the
+`Dataset`. The *reason* is a `Reason` object that specifies the motivation for a
+build step.
 
 The `depgraph.buildall()` function or `Dataset.buildnext()` method can be used
 to obtain ancestor datasets and reason pairs to feed to the `build()` function.
 Alternatively, the `build()` function can be decorated with the `buildmanager`
 decorator, which creates a function that automatically constructs a dataset by
-assembling its dependencies in order.
+assembling its dependencies in order (see the examples below).
 
 Complex dependency graphs can be visualized by using the `graphviz()` function,
 which returns a [DOT language](http://www.graphviz.org/content/dot-language)
