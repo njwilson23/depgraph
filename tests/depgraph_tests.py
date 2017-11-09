@@ -380,6 +380,38 @@ class BuildallTests(SetterUpper, unittest.TestCase):
             else:
                 raise ValueError
 
+    def test_buildall_partial(self):
+
+        # R0      R1      R2      R3         [raw data]
+        #   \     /       |       |
+        #    [DA0]        DA1    /
+        #         \      /  \   /
+        #            DB0     DB1
+        #             \     / |  \
+        #              \   /  |   \
+        #               DC0  DC1  DC2        [products]
+
+        makefile(self.da1.name)
+        makefile(self.db0.name)
+        makefile(self.db1.name)
+        makefile(self.dc0.name)
+        makefile(self.dc1.name)
+        makefile(self.dc2.name)
+
+        stage_count = 0
+        for i, group in enumerate(depgraph.buildall(self.dc0)):
+            stage_count += 1
+            datasets = set([d for d,_ in group])
+            if i == 0:
+                self.assertEqual(datasets, set([self.da0]))
+            elif i == 1:
+                self.assertEqual(datasets, set([self.db0]))
+            elif i == 2:
+                self.assertEqual(datasets, set([self.dc0]))
+            else:
+                raise ValueError
+        self.assertEqual(stage_count, 3)
+
 class CyclicGraphDetectionTests(unittest.TestCase):
 
     def test_acyclic1(self):

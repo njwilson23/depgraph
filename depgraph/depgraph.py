@@ -316,8 +316,8 @@ def buildall(target):
 
     def needsbuild(dataset):
         if dataset.exists and \
-                any(dataset.is_older_than(par) for par in dataset.parents(0)
-                                               if par.exists):
+                any(not par.exists or dataset.is_older_than(par)
+                    for par in dataset.parents()):
             return True, PARENTNEWER
         elif not dataset.exists:
             return True, MISSING
@@ -351,10 +351,10 @@ def buildall(target):
             groups[i].append((dep, reason))
 
     for group in groups:
-        if target in (a[0] for a in group):
-            yield [(target, MISSING)]
-        else:
-            yield group
+        yield group
+
+    if needsbuild(target)[0]:
+        yield [(target, MISSING)]
 
 def get_ancestor_edges(dataset):
     edges = []
@@ -481,8 +481,5 @@ def buildmanager(delegator):
                             elif onfailure == "ignore":
                                 pass
                             attempts[dep] = attempts.get(dep, 0) + 1
-        if (not target.exists) or \
-                any(target.is_older_than(par) for par in target.parents(0)):
-            delegator(target, Reason("it was requested by the caller"))
         return attempts
     return executor
