@@ -1,29 +1,36 @@
 Dependency resolution for datasets
 ==================================
 
-.. figure:: https://travis-ci.org/njwilson23/depgraph.svg?branch=master
-   :alt: Travis status
+|Build Status|
 
-   Travis status
+*depgraph* is a tiny (<500 LOC) Python library for expressing networks
+of datasets and their relationships. In this way, it is superficially
+similar to `Airflow <https://github.com/apache/incubator-airflow>`__ and
+`Luigi <https://github.com/spotify/luigi>`__, although those tools
+contain significantly more functionality.
 
-``depgraph`` is a tiny Python library for expressing networks of
-dependencies required to construct datasets. Networks are declared in
-terms of the relationships (graph edges) between source and target
-datasets (graph nodes). Target datasets can then report sets of
-precursor datasets in the correct order. This makes it simple to throw
-together build script and construct dependencies in parallel.
+Networks are declared in terms of the relationships (graph edges)
+between source and target datasets (graph nodes). Target datasets can
+then report sets of precursor datasets in the correct order. This makes
+it simple to throw together a build script and construct dependencies,
+sequentially or with parallelization.
 
 Traditionally, each ``Dataset`` is designed to correspond to a file. A
 ``DatasetGroup`` class handles cases where multiple files can be
 considered a single file (e.g. a binary data file and its XML metadata).
 
+    Different kinds of resources, such as database tables, can be used
+    as long as they can be queried to determine whether they exist (how
+    how old they are, in order to tak advantage of age-based incremental
+    building).
+
 When a ``Dataset`` requires a different dataset to be built to satisfy
 its dependencies, it provides a reason, such as:
 
--  the dependency is missing
--  the dependency is out of date
+-  the ``Dataset`` is missing, and so must be built
+-  the ``Dataset`` is out of date
 
-``depgraph`` is intended to be a reusable component for constructing
+*depgraph* is intended to be a reusable component for constructing
 scientific dataset build tools. Important considerations for such a
 build tool are that it must:
 
@@ -33,10 +40,48 @@ build tool are that it must:
    reported <http://www.ontosoft.org/gpf/node/1>`__
 -  perform fast rebuilds to enable experimentation
 
-Beyond the Python standard library, ``depgraph`` has no dependencies of
-its own, so it is easy to include in projects running on a laptop, on a
-large cluster, or in the cloud. ``depgraph`` supports modern Python
-implementations (Python 2, Python 3, PyPy).
+Beyond the standard library, *depgraph* has no dependencies of its own,
+so it is easy to include in projects running on a laptop, on a large
+cluster, or in the cloud. *depgraph* supports modern Python
+implementations (Python 2, Python 3, PyPy), and works on Linux, OS X,
+and Windows.
+
+Important parts
+---------------
+
+``Dataset`` defines an individual data product, represented by a
+filename, *name*. Additional keyword arguments may be provided in order
+to facilitate the build process.
+
+The ancestors of a dataset can be retrieved with ``Dataset.parents(n)``,
+where *n* is the number of generations to include. *n=0* means include
+only the direct parents, while *n=1* includes grandparents. *n=-1*
+includes every ancestor. ``Dataset.roots()`` returns the top-level
+ancestors, i.e. those with no additional parents.
+
+Similarly, ``Dataset.children(n)`` yields the descendants of a dataset,
+if any.
+
+Relationships are defined with ``Dataset.dependson(obj)``, where *obj*
+is another ``Dataset`` instance. Relationships can be defined
+programmatically to construct large dependency graphs.
+
+A user defined ``build(dataset, reason)`` function (name unimportant)
+takes a dataset and constructs it based on its ancestors and any other
+attributes of the ``Dataset``. The *reason* is a ``Reason`` object that
+specifies the motivation for a build step.
+
+The ``depgraph.buildall()`` function or ``Dataset.buildnext()`` method
+can be used to obtain ancestor datasets and reason pairs to feed to the
+``build()`` function. Alternatively, the ``build()`` function can be
+decorated with the ``buildmanager`` decorator, which creates a function
+that automatically constructs a dataset by assembling its dependencies
+in order (see the examples below).
+
+Complex dependency graphs can be visualized by using the ``graphviz()``
+function, which returns a `DOT
+language <http://www.graphviz.org/content/dot-language>`__ string
+encoding the visual graph.
 
 Example
 -------
@@ -59,8 +104,9 @@ Declare a set of dependencies resembling the graph below:
     from depgraph import Dataset, buildmanager
 
     # Define Datasets
-    # use an optional keyword `tool` to provide a key instructing our build tool
-    # how to assemble this product
+    # Use an optional keyword `tool` to provide a key instructing our build tool
+    # how to assemble this product. Here we've used strings, but another pattern
+    # would be to provide a callback function
     R0 = Dataset("data/raw0", tool="read_csv")
     R1 = Dataset("data/raw1", tool="read_csv")
     R2 = Dataset("data/raw2", tool="database_query")
@@ -76,7 +122,8 @@ Declare a set of dependencies resembling the graph below:
     DC1 = Dataset("results/dc1", tool="compute_uncertainty")
     DC2 = Dataset("results/dc2", tool="make_plots")
 
-    # Declare relationships
+    # Declare dependency relationships so that depgraph and determine the order of
+    # the build
     DA0.dependson(R0, R1)
     DA1.dependson(R2)
     DB0.dependson(DA0, DA1)
@@ -85,44 +132,54 @@ Declare a set of dependencies resembling the graph below:
     DC1.dependson(DB1)
     DC2.dependson(DB1)
 
-    # Define a function that builds individual dependencies
-    # The *buildmanager* decorator transforms it into a loop that builds all
-    # dependencies below a target
+    # Option 1:
+    # Define a function that builds individual dependencies. The *buildmanager*
+    # decorator transforms it into a loop that builds all dependencies above a
+    # target
     @buildmanager
-    def batchbuilder(dependency):
+    def batchbuilder(dependency, reason):
         # [....]
         return exitcode
 
     batchbuilder(DC1)
 
-    # Alternatively, implement the build loop manually:
-    def build(dependency):
+    # Option 2:
+    # Implement the build loop manually
+    from depgraph import buildall
+
+    def build(dependency, reason):
         # This may have the same logic as `batchbuilder` above, but we
         # will call it directly rather than wrapping it in @buildmanager
         # [....]
         return exitcode
 
-    for group in buildall(DC1):
+    for stage in buildall(DC1):
 
-        for dep, reason in group:
+        # A build stage is a list of dependencies whose own dependencies are met and
+        # that are independent, i.e. they can be built in parallel
+
+        for dep, reason in stage:
+
             # Each target is a dataset with a 'name' attribute and whatever
             # additional keyword arguments where defined with it.
             # The 'reason' is a depgraph.Reason object that codifies why a
-            # particular target is necessary (e.g. it's out of date, it's missing,
+            # particular target is necessary (e.g. it's out of date, it's missing
             # and required by a subsequent target, etc.)
             print("Building {0} with {1} because {2}".format(dep.name, dep.tool,
                                                              reason))
+
             # Call a function or start a subprocess that will result in the
             # target being built and saved to a file
-            return_val = built(dep)
-            # Optionally, perform logging, clean-up, or error handling operations
+            return_val = build(dep, reason)
+
+            # Perform logging, clean-up, or error handling operations
             # [....]
 
 Changes
 -------
 
-Master
-~~~~~~
+0.4
+~~~
 
 -  Performance improvements
 -  ``buildall`` generator function, which is more efficient than
@@ -144,3 +201,6 @@ Master
 ~~~
 
 -  First version, copied from ``depchain`` module of asputil package
+
+.. |Build Status| image:: https://travis-ci.org/njwilson23/depgraph.svg?branch=master
+   :target: https://travis-ci.org/njwilson23/depgraph
