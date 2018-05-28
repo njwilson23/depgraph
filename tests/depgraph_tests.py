@@ -4,7 +4,7 @@ import time
 import unittest
 
 import depgraph
-from depgraph import Dataset, DatasetGroup, buildmanager
+from depgraph import Dataset, DatasetGroup, buildmanager, execute
 
 TESTDIR = os.path.abspath(os.getcwd())
 
@@ -84,9 +84,10 @@ class SetterUpper(object):
 
         for dep in (raw0, raw1, raw2, raw3):
             makefile(dep.name)
-        time.sleep(0.05)
-        cleandir(fullpath("testproject"))
         return
+
+    def tearDown(self):
+        cleandir(fullpath("testproject"))
 
     @classmethod
     def setUpClass(cls):
@@ -254,114 +255,6 @@ class SimpleDependencyGraphTests(unittest.TestCase):
     def test_getroots(self):
         roots = self.result.roots()
         self.assertEqual(set(roots), set([self.raw0, self.raw1, self.raw2]))
-
-class DatasetGroupTests(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        if not os.path.isdir(fullpath("testdata")):
-            os.makedirs(fullpath("testdata"))
-        return
-
-    def test_is_older1(self):
-        """ define two dependency groups, where all files are older in one
-        than in the other. """
-        dep1a = Dataset(fullpath("testdata/1a"))
-        dep1b = Dataset(fullpath("testdata/1b"))
-        dep1c = Dataset(fullpath("testdata/1c"))
-
-        for dep in (dep1a, dep1b, dep1c):
-            makefile(dep.name)
-        time.sleep(0.05)
-
-        dep2a = Dataset(fullpath("testdata/2a"))
-        dep2b = Dataset(fullpath("testdata/2b"))
-        dep2c = Dataset(fullpath("testdata/2c"))
-
-        for dep in (dep2a, dep2b, dep2c):
-            makefile(dep.name)
-
-        group1 = DatasetGroup(fullpath("testdata/1"), [dep1a, dep1b, dep1c])
-        group2 = DatasetGroup(fullpath("testdata/2"), [dep2a, dep2b, dep2c])
-
-        self.assertTrue(group1.is_older_than(group2))
-
-    def test_is_older2(self):
-        """ define two dependency groups, where files ages overlap, and so
-        group 1 is not absolutely older than group 2 """
-        dep1a = Dataset(fullpath("testdata/1a"))
-        dep1b = Dataset(fullpath("testdata/1b"))
-        dep2c = Dataset(fullpath("testdata/2c"))
-
-        for dep in (dep1a, dep1b, dep2c):
-            makefile(dep.name)
-        time.sleep(0.05)
-
-        dep1c = Dataset(fullpath("testdata/1c"))
-        dep2a = Dataset(fullpath("testdata/2a"))
-        dep2b = Dataset(fullpath("testdata/2b"))
-
-        for dep in (dep1c, dep2a, dep2b):
-            makefile(dep.name)
-
-        group1 = DatasetGroup(fullpath("testdata/1"), [dep1a, dep1b, dep1c])
-        group2 = DatasetGroup(fullpath("testdata/2"), [dep2a, dep2b, dep2c])
-
-        self.assertFalse(group1.is_older_than(group2))
-
-    def test_is_older3(self):
-        """ compare a dependency group to a singular dependency """
-        dep1a = Dataset(fullpath("testdata/1a"))
-        dep1b = Dataset(fullpath("testdata/1b"))
-        dep1c = Dataset(fullpath("testdata/1c"))
-
-        group1 = DatasetGroup(fullpath("testdata/1"), [dep1a, dep1b, dep1c])
-
-        for dep in group1:
-            makefile(dep.name)
-        time.sleep(0.05)
-
-        dep2 = Dataset(fullpath("testdata/2"))
-        makefile(dep2.name)
-
-        self.assertTrue(group1.is_older_than(dep2))
-
-    def test_parents(self):
-
-        d1a = Dataset("1a")
-        d1b = Dataset("1b")
-        d1c = Dataset("1c")
-        d1d = Dataset("1d")
-
-        d2a = Dataset("2a")
-        d2b = Dataset("2b")
-        d2c = Dataset("2c")
-
-        d2a.dependson(d1a, d1b)
-        d2b.dependson(d1c)
-        d2c.dependson(d1d)
-
-        dg = DatasetGroup("dg", [d2a, d2b, d2c])
-        self.assertEqual(set(dg.parents()), set([d1a, d1b, d1c, d1d]))
-
-    def test_children(self):
-
-        d1a = Dataset("1a")
-        d1b = Dataset("1b")
-        d1c = Dataset("1c")
-        d1d = Dataset("1d")
-
-        d2a = Dataset("2a")
-        d2b = Dataset("2b")
-        d2c = Dataset("2c")
-
-        d2a.dependson(d1a, d1b)
-        d2b.dependson(d1c)
-        d2c.dependson(d1d)
-
-        dg = DatasetGroup("dg", [d1a, d1b, d1c])
-        self.assertEqual(set(dg.children()), set([d2a, d2b]))
-
 
 class BuildallTests(SetterUpper, unittest.TestCase):
 
@@ -534,6 +427,157 @@ class GraphvizTests(unittest.TestCase):
         self.assertTrue('"C" -> "D"' in dot)
         self.assertTrue('"A" -> "C"' in dot)
         self.assertTrue('"B" -> "C"' in dot)
+
+def unecessary_build(dep, reason):
+    self.fail("unecessary build requested")
+    return True
+
+def makefile_build(dep, reason):
+    makefile(dep.name)
+    return True
+
+class ApplyTests(SetterUpper, unittest.TestCase):
+
+    def test_buildmanager_unecessary(self):
+        # This should be a no-op, because target and all dependencies already
+        # exist and the target is younger that any dependency. If the build
+        # function is called, fail the test.
+
+        makefile(self.raw2.name)
+        makefile(self.raw3.name)
+        makefile(self.da1.name)
+        makefile(self.db1.name)
+        execute(unecessary_build)(self.db1)
+        return
+
+    def test_perfect_builder(self):
+        """ build manager from a delegator function that always succeeds """
+
+        execute(makefile_build)(self.dc0, nprocs=2)
+
+        self.assertTrue(os.path.isfile(self.da0.name))
+        self.assertTrue(os.path.isfile(self.da1.name))
+        self.assertTrue(os.path.isfile(self.db0.name))
+        self.assertTrue(os.path.isfile(self.db1.name))
+        return
+
+    def test_perfect_builder_zero_attempt(self):
+        """ build manager from a delegator function that always succeeds """
+
+        execute(makefile_build)(self.dc0, max_attempts=0)
+
+        self.assertFalse(os.path.isfile(self.da0.name))
+        self.assertFalse(os.path.isfile(self.da1.name))
+        self.assertFalse(os.path.isfile(self.db0.name))
+        self.assertFalse(os.path.isfile(self.db1.name))
+        return
+
+class DatasetGroupTests(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        if not os.path.isdir(fullpath("testdata")):
+            os.makedirs(fullpath("testdata"))
+        return
+
+    def test_is_older1(self):
+        """ define two dependency groups, where all files are older in one
+        than in the other. """
+        dep1a = Dataset(fullpath("testdata/1a"))
+        dep1b = Dataset(fullpath("testdata/1b"))
+        dep1c = Dataset(fullpath("testdata/1c"))
+
+        for dep in (dep1a, dep1b, dep1c):
+            makefile(dep.name)
+        time.sleep(0.05)
+
+        dep2a = Dataset(fullpath("testdata/2a"))
+        dep2b = Dataset(fullpath("testdata/2b"))
+        dep2c = Dataset(fullpath("testdata/2c"))
+
+        for dep in (dep2a, dep2b, dep2c):
+            makefile(dep.name)
+
+        group1 = DatasetGroup(fullpath("testdata/1"), [dep1a, dep1b, dep1c])
+        group2 = DatasetGroup(fullpath("testdata/2"), [dep2a, dep2b, dep2c])
+
+        self.assertTrue(group1.is_older_than(group2))
+
+    def test_is_older2(self):
+        """ define two dependency groups, where files ages overlap, and so
+        group 1 is not absolutely older than group 2 """
+        dep1a = Dataset(fullpath("testdata/1a"))
+        dep1b = Dataset(fullpath("testdata/1b"))
+        dep2c = Dataset(fullpath("testdata/2c"))
+
+        for dep in (dep1a, dep1b, dep2c):
+            makefile(dep.name)
+        time.sleep(0.05)
+
+        dep1c = Dataset(fullpath("testdata/1c"))
+        dep2a = Dataset(fullpath("testdata/2a"))
+        dep2b = Dataset(fullpath("testdata/2b"))
+
+        for dep in (dep1c, dep2a, dep2b):
+            makefile(dep.name)
+
+        group1 = DatasetGroup(fullpath("testdata/1"), [dep1a, dep1b, dep1c])
+        group2 = DatasetGroup(fullpath("testdata/2"), [dep2a, dep2b, dep2c])
+
+        self.assertFalse(group1.is_older_than(group2))
+
+    def test_is_older3(self):
+        """ compare a dependency group to a singular dependency """
+        dep1a = Dataset(fullpath("testdata/1a"))
+        dep1b = Dataset(fullpath("testdata/1b"))
+        dep1c = Dataset(fullpath("testdata/1c"))
+
+        group1 = DatasetGroup(fullpath("testdata/1"), [dep1a, dep1b, dep1c])
+
+        for dep in group1:
+            makefile(dep.name)
+        time.sleep(0.05)
+
+        dep2 = Dataset(fullpath("testdata/2"))
+        makefile(dep2.name)
+
+        self.assertTrue(group1.is_older_than(dep2))
+
+    def test_parents(self):
+
+        d1a = Dataset("1a")
+        d1b = Dataset("1b")
+        d1c = Dataset("1c")
+        d1d = Dataset("1d")
+
+        d2a = Dataset("2a")
+        d2b = Dataset("2b")
+        d2c = Dataset("2c")
+
+        d2a.dependson(d1a, d1b)
+        d2b.dependson(d1c)
+        d2c.dependson(d1d)
+
+        dg = DatasetGroup("dg", [d2a, d2b, d2c])
+        self.assertEqual(set(dg.parents()), set([d1a, d1b, d1c, d1d]))
+
+    def test_children(self):
+
+        d1a = Dataset("1a")
+        d1b = Dataset("1b")
+        d1c = Dataset("1c")
+        d1d = Dataset("1d")
+
+        d2a = Dataset("2a")
+        d2b = Dataset("2b")
+        d2c = Dataset("2c")
+
+        d2a.dependson(d1a, d1b)
+        d2b.dependson(d1c)
+        d2c.dependson(d1d)
+
+        dg = DatasetGroup("dg", [d1a, d1b, d1c])
+        self.assertEqual(set(dg.children()), set([d2a, d2b]))
 
 if __name__ == "__main__":
     unittest.main()
