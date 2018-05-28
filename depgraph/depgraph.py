@@ -1,5 +1,6 @@
 import os
 import itertools
+import functools
 import traceback
 
 class Reason(object):
@@ -124,10 +125,10 @@ class Dataset(object):
         build this (target) Dataset, given the present state of the dependency
         graph.
 
-        These targets are necessary but not necessarily sufficient to build the
+        These targets are necessary but not always sufficient to build the
         objective Dataset after a single iteration. Intended use is to call
-        `buildnext` repeatedly, building the targets after each call, until the
-        objective Dataset can be built.
+        `buildnext` repeatedly, building the targets after each call, until
+        the objective Dataset can be built.
 
         Parameters
         ----------
@@ -432,7 +433,7 @@ def buildmanager(delegator):
     A function that takes a target Dataset and repeatedly calls the delegator
     with the correct sequence of intermediate Datasets to develop the target.
 
-    Additional keyword arguments of the returned function are *max_attampts*,
+    Additional keyword arguments of the returned function are *max_attempts*,
     which is an integer indicating how many times a Dataset should be
     attempted, and a string *onfailure* that may be one of ("raise", "print",
     "ignore"), indicating how to handle exceptions during the build.
@@ -440,7 +441,7 @@ def buildmanager(delegator):
     Example
     -------
     ::
-        @buildmanager(print)
+        @buildmanager(max_attempts=3, onfailure='print')
         def run_build(dependency, reason):
             # performs actions to build *dependency*
             # ...
@@ -449,6 +450,8 @@ def buildmanager(delegator):
         # Calling `run_build` now enters a loop that builds all dependencies
         run_build(target, max_attempts=1)
     """
+
+    @functools.wraps(delegator)
     def executor(target, max_attempts=1, onfailure="raise"):
         """ Perform action to build a target.
 
@@ -472,7 +475,7 @@ def buildmanager(delegator):
                     if attempts.get(dep, 0) < max_attempts:
                         noop = False
                         try:
-                            exitcode = delegator(dep, reason)
+                            delegator(dep, reason)
                         except Exception as exc:
                             if onfailure == "raise":
                                 raise exc
