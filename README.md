@@ -37,8 +37,8 @@ must:
 
 Beyond the standard library, *depgraph* has no dependencies of its own, so it is
 easy to include in projects running on a laptop, on a large cluster, or in the
-cloud. *depgraph* supports modern Python implementations (Python 2, Python 3,
-PyPy), and works on Linux, OS X, and Windows.
+cloud. *depgraph* supports modern Python implementations (Python 3, PyPy3), and
+works on Linux, OS X, and Windows.
 
 ## Important parts
 
