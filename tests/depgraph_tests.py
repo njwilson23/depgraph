@@ -436,7 +436,7 @@ def makefile_build(dep, reason):
     makefile(dep.name)
     return True
 
-class ApplyTests(SetterUpper, unittest.TestCase):
+class ExecutorTests(SetterUpper, unittest.TestCase):
 
     def test_buildmanager_unecessary(self):
         # This should be a no-op, because target and all dependencies already
@@ -459,17 +459,6 @@ class ApplyTests(SetterUpper, unittest.TestCase):
         self.assertTrue(os.path.isfile(self.da1.name))
         self.assertTrue(os.path.isfile(self.db0.name))
         self.assertTrue(os.path.isfile(self.db1.name))
-        return
-
-    def test_perfect_builder_zero_attempt(self):
-        """ build manager from a delegator function that always succeeds """
-
-        execute(makefile_build)(self.dc0, max_attempts=0)
-
-        self.assertFalse(os.path.isfile(self.da0.name))
-        self.assertFalse(os.path.isfile(self.da1.name))
-        self.assertFalse(os.path.isfile(self.db0.name))
-        self.assertFalse(os.path.isfile(self.db1.name))
         return
 
 class DatasetGroupTests(unittest.TestCase):

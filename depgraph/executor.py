@@ -4,6 +4,7 @@ import sys
 import time
 import threading
 
+from fun import Try, Success, Failure
 from concurrent.futures import ThreadPoolExecutor, wait
 
 from . import MISSING, PARENTNEWER
@@ -13,12 +14,12 @@ def supervisor(target, steps, signals, sleep=0.1):
 
     while True:
 
-        try:
-            msg = signals.get_nowait()
-            if msg == "quit":
-                break
-        except queue.Empty:
-            pass
+        if Try(signals.get_nowait)\
+                .map_failure(queue.Empty, lambda exc: "empty")
+                .to_option()\
+                .map(lambda msg: msg == "quit")\
+                .otherwise(False):
+            break
 
         steps_outstanding = 0
         new_steps_submitted = 0
@@ -44,53 +45,31 @@ def supervisor(target, steps, signals, sleep=0.1):
     steps.put((None, None)) # signal completion
     return
 
-def worker(fn, target, reason, ehandler, max_attempts=1):
-    success = False
-    attempts = 0
-    while attempts < max_attempts:
-        attempts += 1
-        try:
-            success = fn(target, reason)
-        except Exception as e:
-            ehandler(e)
-    return success
-
+def worker(fn, target, reason, err_handler, max_attempts=1):
+    t = Try(fn, target, reason).on_failure(err_handler)
+    if t.succeeded or max_attempts <= 1:
+        return t
+    return worker(fn, target, reason, err_handler, max_attempts=max_attempts - 1)
 
 def raise_exc(e):
     raise e
 
 def execute(delegator):
-    """ Decorator to be used for constructing build managers.
-
-    Wraps
-    -----
-    A delegator function (f(target, reason)) that given a build target and a
-    reason, attempts to build the target
-
-    Returns
-    -------
-    A function that takes a target Dataset and repeatedly calls the delegator
-    with the correct sequence of intermediate Datasets to develop the target.
-
-    Additional keyword arguments of the returned function are *max_attempts*,
-    which is an integer indicating how many times a Dataset should be
-    attempted, and a string *onfailure* that may be one of ("raise", "print",
-    "ignore"), indicating how to handle exceptions during the build.
+    """ Returns a function that executes *delegator* in order to build a target.
 
     Example
     -------
     ::
-        @buildmanager(max_attempts=3, onfailure='print')
+        @buildorchestrator(max_attempts=3, onfailure='print')
         def run_build(dependency, reason):
             # performs actions to build *dependency*
             # ...
             return exitcode
 
-        # Calling `run_build` now enters a loop that builds all dependencies
-        run_build(target, max_attempts=1)
+        execute(run_build)(target, max_attempts=1, onfailure="raise")
     """
 
-    def manager(target, max_attempts=1, onfailure="raise", nprocs=None):
+    def orchestrator(target, max_attempts=1, onfailure="raise", nprocs=None):
         """ Perform action to build a target.
 
         Parameters
@@ -121,16 +100,18 @@ def execute(delegator):
             raise ValueError("invalid value for onfailure: '{}'"
                              .format(onfailure))
 
-        signals = queue.Queue()
-        steps = queue.Queue()
         if nprocs is None:
             nprocs = multiprocessing.cpu_count()
 
-        th_supervisor = threading.Thread(None, supervisor, args=(target, steps, signals))
+        signals = queue.Queue()
+        steps = queue.Queue()
+
+        th_supervisor = threading.Thread(None, supervisor,
+                                         args=(target, steps, signals))
         th_supervisor.start()
 
         pending = []
-        with ThreadPoolExecutor(max_workers=2) as executor:
+        with ThreadPoolExecutor(max_workers=nprocs) as executor:
 
             while True:
 
@@ -167,4 +148,4 @@ def execute(delegator):
         th_supervisor.join()
 
         return
-    return manager
+    return orchestrator
