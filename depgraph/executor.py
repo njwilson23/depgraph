@@ -15,7 +15,7 @@ def supervisor(target, steps, signals, sleep=0.1):
     while True:
 
         if Try(signals.get_nowait)\
-                .map_failure(queue.Empty, lambda exc: "empty")
+                .map_failure(queue.Empty, lambda exc: "empty")\
                 .to_option()\
                 .map(lambda msg: msg == "quit")\
                 .otherwise(False):

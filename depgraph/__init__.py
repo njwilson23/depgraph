@@ -1,5 +1,7 @@
 from .depgraph import (Dataset, DatasetGroup,
-                       is_acyclic, graphviz, buildall,
-                       buildmanager,
+                       is_acyclic, buildall,
                        MISSING, PARENTNEWER, PARENTMISSING)
+
 from .executor import execute
+
+from .graphviz import graphviz

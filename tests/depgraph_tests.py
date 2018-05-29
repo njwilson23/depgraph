@@ -4,7 +4,7 @@ import time
 import unittest
 
 import depgraph
-from depgraph import Dataset, DatasetGroup, buildmanager, execute
+from depgraph import Dataset, DatasetGroup, execute
 
 TESTDIR = os.path.abspath(os.getcwd())
 
@@ -128,79 +128,6 @@ class BuildnextTests(SetterUpper, unittest.TestCase):
         self.assertTrue(self.db1 in tobuild2)
         self.assertTrue(self.db0 in tobuild2)
         self.assertEqual(len(tobuild2), 2)
-        return
-
-class BuildManagerTests(SetterUpper, unittest.TestCase):
-
-    def test_buildmanager_unecessary(self):
-        # This should be a no-op, because target and all dependencies already
-        # exist and the target is younger that any dependency. If the build
-        # function is called, fail the test.
-
-        @buildmanager
-        def build(dep, reason):
-            self.fail("unecessary build requested")
-            return 0
-
-        makefile(self.raw2.name)
-        makefile(self.raw3.name)
-        makefile(self.da1.name)
-        makefile(self.db1.name)
-        build(self.db1)
-        return
-
-    def test_perfect_builder(self):
-        """ build manager from a delegator function that always succeeds """
-
-        @buildmanager
-        def build(dep, reason):
-            makefile(dep.name)
-            return 0
-
-        out = build(self.dc0)
-
-        self.assertTrue(os.path.isfile(self.da0.name))
-        self.assertTrue(os.path.isfile(self.da1.name))
-        self.assertTrue(os.path.isfile(self.db0.name))
-        self.assertTrue(os.path.isfile(self.db1.name))
-        return
-
-    def test_perfect_builder_zero_attempt(self):
-        """ build manager from a delegator function that always succeeds """
-
-        @buildmanager
-        def build(dep, reason):
-            makefile(dep.name)
-            return 0
-
-        out = build(self.dc0, max_attempts=0)
-
-        self.assertFalse(os.path.isfile(self.da0.name))
-        self.assertFalse(os.path.isfile(self.da1.name))
-        self.assertFalse(os.path.isfile(self.db0.name))
-        self.assertFalse(os.path.isfile(self.db1.name))
-        return
-
-    @unittest.skipIf(sys.version_info < (3, 2), "requires concurrent.futures")
-    def test_parallel_builder(self):
-
-        import concurrent.futures
-
-        def build(dep, reason):
-            makefile(dep.name)
-            return reason
-
-        futures = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            for stage in depgraph.buildall(self.dc0):
-                for dep, reason in stage:
-                    futures.append(pool.submit(build, dep, reason))
-        concurrent.futures.wait(futures)
-
-        self.assertTrue(os.path.isfile(self.da0.name))
-        self.assertTrue(os.path.isfile(self.da1.name))
-        self.assertTrue(os.path.isfile(self.db0.name))
-        self.assertTrue(os.path.isfile(self.db1.name))
         return
 
 class SimpleDependencyGraphTests(unittest.TestCase):
