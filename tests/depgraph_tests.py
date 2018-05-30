@@ -356,8 +356,7 @@ class GraphvizTests(unittest.TestCase):
         self.assertTrue('"B" -> "C"' in dot)
 
 def unecessary_build(dep, reason):
-    self.fail("unecessary build requested")
-    return True
+    raise Exception("unecessary build requested")
 
 def makefile_build(dep, reason):
     makefile(dep.name)

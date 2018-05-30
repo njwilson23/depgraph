@@ -42,7 +42,7 @@ def supervisor(target, steps, signals, sleep=0.1):
     elif any(target.is_older_than(p) for p in target.parents(0)):
         steps.put((target, PARENTNEWER))
 
-    steps.put((None, None)) # signal completion
+    steps.put("finished") # signal completion
     return
 
 def worker(fn, target, reason, err_handler, max_attempts=1):
@@ -113,6 +113,10 @@ def execute(delegator):
         pending = []
         with ThreadPoolExecutor(max_workers=nprocs) as executor:
 
+            def submitter(dep, reason):
+                return executor.submit(worker, delegator, dep, reason, ehandler,
+                                       max_attempts=max_attempts)
+
             while True:
 
                 # handle outstanding futures:
@@ -120,29 +124,19 @@ def execute(delegator):
                 completed = [fut for (fut, done) in zip(pending, donemap) if done]
                 pending = [fut for (fut, done) in zip(pending, donemap) if not done]
 
-                if False in (fut.result() for fut in completed):
+                if any(not fut.result().succeeded  for fut in completed):
                     break
-
 
                 if len(pending) > 5*nprocs:
                     # backpressure on submissions
                     time.sleep(1.0)
 
                 else:
-                    try:
-                        dep, reason = steps.get(True, 0.1)
-                        if dep is None:
-                            # supervisor says job finished
+                    t = Try(steps.get, True, 0.1)
+                    if t.succeeded:
+                        if t.result == "finished":
                             break
-
-                        fut = executor.submit(worker, delegator, dep, reason,
-                                              ehandler,
-                                              max_attempts=max_attempts)
-                        pending.append(fut)
-                    except queue.Empty:
-                        pass
-
-            wait(pending)
+                        pending.append(submitter(*t.result))
 
         signals.put("quit")
         th_supervisor.join()
