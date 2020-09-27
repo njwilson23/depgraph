@@ -329,6 +329,7 @@ def buildall(target):
         queue = [(0, root) for root in roots]
         while len(queue) != 0:
             i, dep = queue.pop(0)
+            marks[dep] = i
             for child in filter(lambda d: d in parents, dep.children(0)):
                 iold = marks.get(child, -1)
                 if i > iold:
